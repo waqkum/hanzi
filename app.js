@@ -762,7 +762,9 @@ function renderSummary() {
   return `
     <div class="hdr">
       <div class="hdr-meta">${h(S.setLabel)}</div>
-      <div class="hdr-meta">${fmtDuration(S.lastMs)}</div>
+      <!-- The session time is still recorded for the avg-session stat on
+           Progress; it just isn't worth the slot here. -->
+      <button class="pill" data-act="sets">Pick another</button>
     </div>
 
     <div class="title-lg"><div class="title-lg-text">Session done.<br>Nice one.</div></div>
