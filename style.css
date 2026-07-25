@@ -1158,6 +1158,30 @@ button {
   font-weight: 500;
 }
 
+/* — True/false: the ★ claim being judged — */
+
+.claim {
+  display: flex;
+  gap: 10px;
+  padding: 16px 6px 0;
+  flex: none;
+}
+
+.claim-star {
+  font-size: 13px;
+  color: var(--ink-45);
+  line-height: 1.5;
+  flex: none;
+}
+
+.claim-han {
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.claim .q-py,
+.claim .q-en { margin-top: 3px; }
+
 .pic-glyph {
   font-size: 44px;
   font-weight: 300;

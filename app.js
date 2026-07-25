@@ -312,6 +312,7 @@ function questionText(q) {
   if (!q) return '';
   if (q.type === 'fill')      return q.pre + q.post;
   if (q.type === 'reading')   return q.han;
+  if (q.type === 'truefalse') return q.han;   // the statement, not the claim
   if (q.type === 'listening') return q.audio;
   return '';
 }
@@ -923,6 +924,7 @@ function renderRunner() {
     picture:   renderPicture,
     listening: renderListening,
     reading:   renderReading,
+    truefalse: renderTrueFalse,
   }[q.type](q, en, done);
 
   const right = S.answer === q.answer;
@@ -1064,6 +1066,43 @@ function renderListening(q, en, done) {
       <div class="player-rate">0.75×</div>
     </div>
     <div class="q-prompt">${h(q.prompt)}</div>
+    <div class="opt-list">${rows}</div>`;
+}
+
+/* The workbook's 判断对错: a statement, then a claim about it to judge.
+   Options are fixed — 对 / 错 — so the data carries answer 0 for true and
+   1 for false rather than an options array. */
+function renderTrueFalse(q, en, done) {
+  const opts = [
+    { han: '对', py: 'duì', en: 'true' },
+    { han: '错', py: 'cuò', en: 'false' },
+  ];
+
+  const rows = opts.map((o, i) => `
+    <button class="${optClass(i, q)}" data-act="answer" data-i="${i}">
+      <div class="opt-row-body">
+        <div class="opt-row-han han">${o.han}</div>
+        <div class="opt-row-py">${o.py}</div>
+        <div class="opt-en">· ${o.en}</div>
+      </div>
+    </button>`).join('');
+
+  return `
+    <div class="q-card">
+      <div class="q-passage han">${charSpans(q.han)}</div>
+      <div class="q-py">${h(q.py)}</div>
+      ${en || done ? `<div class="q-en">${h(q.en)}</div>` : ''}
+    </div>
+
+    <div class="claim">
+      <div class="claim-star">★</div>
+      <div>
+        <div class="claim-han han">${h(q.claim)}</div>
+        <div class="q-py">${h(q.claimPy)}</div>
+        ${en || done ? `<div class="q-en">${h(q.claimEn)}</div>` : ''}
+      </div>
+    </div>
+
     <div class="opt-list">${rows}</div>`;
 }
 
