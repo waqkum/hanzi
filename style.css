@@ -96,7 +96,13 @@ button {
    ═══════════════════════════════════════════════════════════════════ */
 
 .app {
-  height: 100dvh;
+  /* svh, not dvh: the *small* viewport is the height with browser chrome
+     fully shown, so the canvas always fits whether or not Safari's URL bar
+     is on screen. dvh tracks the current viewport and over-reports while
+     the bar is expanded, which clipped the bottom card on a real phone.
+     In an installed PWA there is no chrome and all three units agree. */
+  height: 100vh;          /* fallback for browsers without svh */
+  height: 100svh;
   max-width: 430px;
   margin: 0 auto;
   display: flex;
@@ -106,14 +112,14 @@ button {
     16px
     max(20px, calc(env(safe-area-inset-bottom, 0px) + 8px));
   gap: 9px;
-  overflow: hidden;
-}
-
-/* Screens that overflow 800px scroll internally rather than clipping. */
-.app.is-scroll {
+  /* Scroll rather than clip. On screens that fit there is nothing to
+     scroll, so this is invisible; on a short phone it degrades gracefully
+     instead of hiding the Progress card. */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+.app.is-scroll { overflow-y: auto; }
 
 /* ═══ Header ══════════════════════════════════════════════════════════ */
 
@@ -334,7 +340,9 @@ button {
   border-radius: var(--r-hero);
   padding: 20px 22px;
   flex: 1;
-  min-height: 118px;
+  /* Low enough that three cards plus the header and hero still fit on a
+     short phone (iPhone SE is 667pt). They grow to fill on taller screens. */
+  min-height: 92px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1294,7 +1302,8 @@ button {
   }
 
   .app {
-    height: min(800px, 100dvh);
+    height: min(800px, 100vh);
+    height: min(800px, 100svh);
     width: 390px;
     background: var(--bone);
     border-radius: 32px;
