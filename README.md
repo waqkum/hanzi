@@ -56,10 +56,23 @@ Standard Course lesson it's introduced in, and an example sentence.
   against your books and correct in place — nothing else hardcodes the mapping.
 - **Page numbers** assume four workbook pages per lesson. Correct in
   `data/lessons.js` if your copy differs.
-- **No real audio or photos.** Listening questions and the flashcard ♪ button use
-  the browser's Chinese speech synthesis at 0.75×. Picture questions use emoji
-  placeholders. Both are swap-in points: give a question an `<audio>` source or
-  real image paths and the layout is already there.
+- **No real audio or photos.** Everything spoken uses the browser's Chinese
+  speech synthesis at 0.75×. Picture questions use emoji placeholders. Both are
+  swap-in points: give a question an `<audio>` source or real image paths and
+  the layout is already there.
+
+## Exercise audio
+
+Opening a question reads its Chinese aloud, and each character lights as it is
+spoken. The ♪ beside the question label replays it.
+
+What gets read depends on the type: fill-in-the-blank speaks the sentence
+**without** the missing word, reading speaks the passage, listening plays its
+audio line, and picture questions stay silent — there's no sentence to read.
+
+The read-along prefers the utterance's `boundary` events, which give exact
+character positions. Many zh-CN voices never fire them, so a timed sweep
+(`CHAR_MS`) runs alongside and stands down the moment a real boundary arrives.
 
 ## Scheduling
 

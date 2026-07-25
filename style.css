@@ -948,6 +948,15 @@ button {
 
 /* ═══ 6. Exercise runner ══════════════════════════════════════════════ */
 
+.q-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-right: 4px;
+  flex: none;
+}
+
 .q-label {
   font-size: 11px;
   font-weight: 600;
@@ -956,6 +965,26 @@ button {
   padding: 14px 6px 0;
   flex: none;
 }
+
+/* The card faces give .audio-btn its contrast; out here on the bone page
+   background it needs its own fill to read as a button. */
+.q-label-row .audio-btn {
+  margin-top: 12px;
+  background: var(--white);
+}
+
+/* ── Read-along ───────────────────────────────────────────────────────
+   One span per character so the line can be lit as it is spoken. The
+   highlight is a background rather than a colour change so it stays
+   legible on the white question card.
+   ─────────────────────────────────────────────────────────────────── */
+
+.sp {
+  border-radius: 4px;
+  transition: background 120ms linear;
+}
+
+.sp.is-lit { background: var(--lime); }
 
 .q-card {
   background: var(--white);

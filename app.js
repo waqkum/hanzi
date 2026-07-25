@@ -241,6 +241,85 @@ if ('speechSynthesis' in window) {
   speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
 }
 
+/* ── Read-along ─────────────────────────────────────────────────────────
+   Speaks a line and lights each character as it is read. `boundary`
+   events are the accurate source, but plenty of zh-CN voices never fire
+   them, so a timed sweep runs alongside and bows out the moment a real
+   boundary arrives. Roughly a beat per character at 0.75×.
+   ─────────────────────────────────────────────────────────────────────── */
+
+const CHAR_MS = 300;
+let sweepTimer = null;
+let speakToken = 0;               // so a cancelled utterance can't clear a newer one
+
+/* Wraps each character so it can be lit individually. Pass `from` when the
+   text is rendered in more than one run, as the fill-in-the-blank sentence
+   is, to keep the indices continuous across the gap. */
+const charSpans = (text, from = 0) =>
+  [...text].map((c, i) => `<span class="sp" data-i="${from + i}">${h(c)}</span>`).join('');
+
+function clearLit() {
+  clearInterval(sweepTimer);
+  sweepTimer = null;
+  document.querySelectorAll('.sp.is-lit').forEach(el => el.classList.remove('is-lit'));
+}
+
+function speakAlong(text) {
+  clearLit();
+  if (!('speechSynthesis' in window) || !text) return;
+
+  const spans = [...document.querySelectorAll('.sp')];
+  const lightOnly = i => spans.forEach((el, n) => el.classList.toggle('is-lit', n === i));
+  const token = ++speakToken;
+  let gotBoundary = false;
+
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN';
+    u.rate = 0.75;
+    const voice = speechSynthesis.getVoices().find(v => /^zh/i.test(v.lang));
+    if (voice) u.voice = voice;
+
+    u.onboundary = e => {
+      gotBoundary = true;
+      clearInterval(sweepTimer);
+      sweepTimer = null;
+      if (token === speakToken) lightOnly(e.charIndex);
+    };
+    const finish = () => { if (token === speakToken) clearLit(); };
+    u.onend = finish;
+    u.onerror = finish;
+
+    speechSynthesis.speak(u);
+
+    if (!spans.length) return;
+    let i = 0;
+    sweepTimer = setInterval(() => {
+      if (gotBoundary || token !== speakToken) { clearInterval(sweepTimer); return; }
+      if (i >= spans.length) { clearLit(); return; }
+      lightOnly(i++);
+    }, CHAR_MS);
+  } catch (e) {
+    console.warn('Hanzi: read-along unavailable.', e);
+    clearLit();
+  }
+}
+
+/* What gets read for each question type. The fill-in-the-blank sentence is
+   spoken without the missing word — that's the bit you're working out. */
+function questionText(q) {
+  if (!q) return '';
+  if (q.type === 'fill')      return q.pre + q.post;
+  if (q.type === 'reading')   return q.han;
+  if (q.type === 'listening') return q.audio;
+  return '';
+}
+
+function speakQuestion() {
+  speakAlong(questionText(S.qs[S.questionIndex]));
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    Session state (not persisted)
    ══════════════════════════════════════════════════════════════════════ */
@@ -460,18 +539,23 @@ function renderHome() {
    ══════════════════════════════════════════════════════════════════════ */
 
 function renderSets() {
+  /* First tap picks the level and swaps the chapter list below; tapping
+     the one already selected drills the whole level. */
   const levelCard = lv => {
+    const on    = lv === S.level;
     const words = wordsIn(lv);
     const held  = heldCount(lv);
-    const sub   = held === words.length
-      ? `${words.length} words · all solid`
-      : `${words.length} words · ${held} held`;
+    const sub   = on
+      ? 'Tap again for all of it'
+      : held === words.length
+        ? `${words.length} words · all solid`
+        : `${words.length} words · ${held} held`;
     return `
-      <button class="level-card${lv === S.level ? ' level-card-active' : ''}"
-              data-act="drill-level" data-lv="${lv}">
-        <div class="label${lv === S.level ? ' label-on-tint' : ''}">LEVEL</div>
+      <button class="level-card${on ? ' level-card-active' : ''}"
+              data-act="pick-level" data-lv="${lv}">
+        <div class="label${on ? ' label-on-tint' : ''}">LEVEL</div>
         <div class="level-name">${LEVEL_LABEL[lv]}</div>
-        <div class="level-sub">${sub}</div>
+        <div class="level-sub">${h(sub)}</div>
       </button>`;
   };
 
@@ -710,36 +794,36 @@ function renderExercises() {
     ? 'Blank-filling, pictures, listening, a short reading.'
     : 'Generated from this lesson’s words until the workbook set is in.';
 
-  const past = LESSONS[lv].slice(0, CURRENT.lesson - 1).reverse().slice(0, 3).map(les => {
-    const rec = store.exercises[`${lv}-${les.n}`];
-    if (!rec) {
-      return `
-        <button class="past-row" data-act="run" data-les="${les.n}">
-          <div class="row-body">
-            <div class="row-name">Lesson ${les.n} · ${h(les.pages)}</div>
-            <div class="row-py">${h(les.py)}</div>
-          </div>
-          <div class="past-score">not done</div>
-        </button>`;
+  /* Every lesson in book order, 1 at the top — the workbook's own
+     sequence. The current one is the hero card above, so it's skipped
+     here rather than listed twice. Lessons past the current one are
+     playable but marked as not reached yet. */
+  const past = LESSONS[lv].filter(les => les.n !== cur.n).map(les => {
+    const rec     = store.exercises[`${lv}-${les.n}`];
+    const ahead   = les.n > cur.n;
+    const cls     = 'past-row' + (ahead && !rec ? ' past-row-next' : '');
+
+    let right;
+    if (rec) {
+      const strong = rec.score / rec.total >= 0.75;
+      right = `
+        <div class="past-score">${rec.score}/${rec.total}</div>
+        <div class="status-dot ${strong ? 'status-strong' : 'status-shaky'}"></div>`;
+    } else {
+      right = `<div class="past-score">${ahead ? 'not yet' : 'not done'}</div>`;
     }
-    const strong = rec.score / rec.total >= 0.75;
+
     return `
-      <button class="past-row" data-act="run" data-les="${les.n}">
+      <button class="${cls}" data-act="run" data-les="${les.n}">
         <div class="row-body">
           <div class="row-name">Lesson ${les.n} · ${h(les.pages)}</div>
           <div class="row-py">${h(les.py)}</div>
         </div>
-        <div class="past-score">${rec.score}/${rec.total}</div>
-        <div class="status-dot ${strong ? 'status-strong' : 'status-shaky'}"></div>
+        ${right}
       </button>`;
   }).join('');
 
-  const next = LESSONS[lv][CURRENT.lesson];
-  const nextRow = next ? `
-    <div class="past-row past-row-next">
-      <div class="row-body"><div class="row-name">Lesson ${next.n} · ${h(next.pages)}</div></div>
-      <div style="font-size:12px">next week</div>
-    </div>` : '';
+  const nextRow = '';
 
   return `
     ${backHeader('home', 'Home', `<div class="hdr-meta">Workbook ${lv}</div>`)}
@@ -771,6 +855,9 @@ function startRunner(lesson) {
     exRight: 0, exStartedAt: Date.now(),
   });
   go('runner');
+  // After render, so the character spans exist to light up. Both callers
+  // reach here from a tap, which is what iOS requires to allow speech.
+  speakQuestion();
 }
 
 /* One skin function shared by every option, per the handoff. */
@@ -810,7 +897,12 @@ function renderRunner() {
         <div class="pill">${S.questionIndex + 1} / ${S.qs.length}</div>
       </div>`)}
 
-    <div class="q-label">${h(q.label)}</div>
+    <div class="q-label-row">
+      <div class="q-label">${h(q.label)}</div>
+      ${questionText(q) && q.type !== 'listening'
+        ? '<button class="audio-btn" data-act="say-q" aria-label="Read it again">♪</button>'
+        : ''}
+    </div>
     ${body}
     <div class="q-foot">${feedback}</div>`;
 }
@@ -832,7 +924,7 @@ function renderFill(q, en, done) {
 
   return `
     <div class="q-card">
-      <div class="q-sentence han">${h(q.pre)}${blank}${h(q.post)}</div>
+      <div class="q-sentence han">${charSpans(q.pre)}${blank}${charSpans(q.post, [...q.pre].length)}</div>
       <div class="q-py">${h(q.py)}</div>
       ${en ? `<div class="q-en">${h(q.en)}</div>` : ''}
     </div>
@@ -893,7 +985,7 @@ function renderReading(q, en, done) {
 
   return `
     <div class="q-card">
-      <div class="q-passage han">${h(q.han)}</div>
+      <div class="q-passage han">${charSpans(q.han)}</div>
       <div class="q-py">${h(q.py)}</div>
       ${en ? `<div class="q-en">${h(q.en)}</div>` : ''}
     </div>
@@ -917,12 +1009,14 @@ function nextQuestion() {
       score: S.exRight, total: S.qs.length, date: todayISO(),
     };
     save();
+    clearLit();
     go('exdone');
     return;
   }
   S.questionIndex += 1;
   S.answer = null;
   render();
+  speakQuestion();
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1203,10 +1297,18 @@ $app.addEventListener('click', ev => {
     case 'progress':  go('progress'); break;
     case 'exercises': go('exercises'); break;
 
-    case 'drill-level':
-      S.level = Number(target.dataset.lv);
-      startDrill(wordsIn(S.level), `All ${LEVEL_LABEL[S.level]}`);
+    /* Tapping an unselected level just selects it, so you can pick a
+       chapter within it. Tapping the selected one drills the whole level. */
+    case 'pick-level': {
+      const lv = Number(target.dataset.lv);
+      if (lv === S.level) {
+        startDrill(wordsIn(lv), `All ${LEVEL_LABEL[lv]}`);
+      } else {
+        S.level = lv;
+        render();
+      }
       break;
+    }
 
     case 'drill-lesson': {
       const n = Number(target.dataset.les);
@@ -1233,6 +1335,11 @@ $app.addEventListener('click', ev => {
     case 'say':
       ev.stopPropagation();
       speak(target.dataset.text);
+      break;
+
+    case 'say-q':
+      ev.stopPropagation();
+      speakQuestion();
       break;
 
     case 'run':
