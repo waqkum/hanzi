@@ -337,6 +337,10 @@ let S = {
   newToday: [],
   againCount: 0,
   entering: false,
+  drillLesson: null,
+
+  matches: [],        // picture questions: tile index -> chosen option index
+  chipOrder: [],      // picture questions: shuffled display order of options
   startedAt: 0,
   lastMs: 0,
 
@@ -602,11 +606,14 @@ function renderSets() {
    3 · Drill
    ══════════════════════════════════════════════════════════════════════ */
 
-function startDrill(pool, label) {
+/* `lesson` is the chapter number when the set was a single chapter, so the
+   summary can offer the next one. Null for whole-level or unseen sets. */
+function startDrill(pool, label, lesson = null) {
   const cards = buildSession(pool);
   if (!cards.length) return;
   Object.assign(S, {
     setLabel: label, cards, cardIndex: 0, flipped: false,
+    drillLesson: lesson,
     newToday: cards.filter(isNew), againCount: 0, startedAt: Date.now(),
   });
   go('drill');
@@ -778,8 +785,18 @@ function renderSummary() {
 
     <div class="btn-row">
       <button class="btn btn-ghost" data-act="home">Home</button>
-      <button class="btn btn-ink"   data-act="exercises">Do the homework</button>
+      ${nextLesson()
+        ? '<button class="btn btn-ink" data-act="drill-next">Next lesson</button>'
+        : '<button class="btn btn-ink" data-act="exercises">Do the homework</button>'}
     </div>`;
+}
+
+/* The chapter after the one just drilled, if there is one. Whole-level and
+   unseen-word sets aren't a chapter, so they have no "next" — those fall
+   back to the homework button rather than showing a dead control. */
+function nextLesson() {
+  if (!S.drillLesson) return null;
+  return LESSONS[S.level].find(les => les.n === S.drillLesson + 1) || null;
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -854,10 +871,35 @@ function startRunner(lesson) {
     lesson, qs, questionIndex: 0, answer: null,
     exRight: 0, exStartedAt: Date.now(),
   });
+  prepQuestion();
   go('runner');
   // After render, so the character spans exist to light up. Both callers
   // reach here from a tap, which is what iOS requires to allow speech.
   speakQuestion();
+}
+
+/* Per-question scratch state. Picture questions need a slot per tile and a
+   shuffled chip order; everything else clears them. */
+function prepQuestion() {
+  const q = S.qs[S.questionIndex];
+  S.matches = [];
+  S.chipOrder = [];
+  if (q && q.type === 'picture') {
+    S.matches = new Array(q.tiles.length).fill(null);
+    S.chipOrder = shuffle(q.options.map((_, i) => i));
+  }
+}
+
+/* The single `why.wrong` string can't describe a four-way match, so a
+   missed picture question names the pairs that went astray instead. */
+function verdictWhy(q, right) {
+  if (q.type === 'picture' && !right) {
+    const missed = q.tiles
+      .map((t, i) => (S.matches[i] !== i ? `${q.options[i].han} is the ${t.alt}` : null))
+      .filter(Boolean);
+    if (missed.length) return missed.join('; ') + '.';
+  }
+  return right ? q.why.right : q.why.wrong;
 }
 
 /* One skin function shared by every option, per the handoff. */
@@ -881,10 +923,11 @@ function renderRunner() {
     reading:   renderReading,
   }[q.type](q, en, done);
 
+  const right = S.answer === q.answer;
   const feedback = done ? `
-    <div class="banner ${S.answer === q.answer ? 'banner-right' : 'banner-wrong'}">
-      <div class="banner-verdict">${S.answer === q.answer ? 'Right.' : 'Not that one.'}</div>
-      <div class="banner-why">${h(S.answer === q.answer ? q.why.right : q.why.wrong)}</div>
+    <div class="banner ${right ? 'banner-right' : 'banner-wrong'}">
+      <div class="banner-verdict">${right ? 'Right.' : 'Not that one.'}</div>
+      <div class="banner-why">${h(verdictWhy(q, right))}</div>
     </div>
     <button class="btn-next" data-act="next-q">
       ${S.questionIndex + 1 >= S.qs.length ? 'Finish' : 'Next question'}
@@ -926,28 +969,77 @@ function renderFill(q, en, done) {
     <div class="q-card">
       <div class="q-sentence han">${charSpans(q.pre)}${blank}${charSpans(q.post, [...q.pre].length)}</div>
       <div class="q-py">${h(q.py)}</div>
-      ${en ? `<div class="q-en">${h(q.en)}</div>` : ''}
+      ${en || done ? `<div class="q-en">${h(q.en)}</div>` : ''}
     </div>
     <div class="opt-chips">${chips}</div>`;
 }
 
+/* Every picture gets matched, not just one. tiles[i] pairs with
+   options[i] — that invariant holds for authored and generated sets alike
+   — so a match is right when the chosen option index equals the tile's.
+   The chips are shown in a shuffled order, or matching would just be
+   pairing things by position. */
 function renderPicture(q, en, done) {
-  const tiles = q.tiles.map((t, i) => `
-    <div class="pic${i === q.target ? ' pic-target' : ''}">
-      <span class="pic-glyph" role="img" aria-label="${h(t.alt || '')}">${t.glyph}</span>
-    </div>`).join('');
+  const total   = q.tiles.length;
+  const current = done ? -1 : S.matches.findIndex(m => m == null);
 
-  const chips = q.options.map((o, i) => `
-    <button class="${optClass(i, q)}" data-act="answer" data-i="${i}">
-      <div class="opt-chip-body opt-chip-body-sm">
-        <div class="opt-chip-han-sm han">${h(o.han)}</div>
-        <div class="opt-py">${h(o.py)}</div>
-      </div>
-    </button>`).join('');
+  const tiles = q.tiles.map((t, i) => {
+    const picked = S.matches[i];
+    const has    = picked != null;
+    const cls = 'pic'
+      + (has ? (picked === i ? ' pic-right' : ' pic-wrong') : '')
+      + (i === current ? ' pic-target' : '');
+    return `
+      <div class="${cls}">
+        <span class="pic-glyph" role="img" aria-label="${h(t.alt || '')}">${t.glyph}</span>
+        ${has ? `<div class="pic-tag han">${h(q.options[picked].han)}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  const used = new Set(S.matches.filter(m => m != null));
+  const chips = S.chipOrder.map(oi => {
+    const o    = q.options[oi];
+    const spent = used.has(oi);
+    return `
+      <button class="opt${spent ? ' opt-muted' : ''}"
+              ${spent ? '' : `data-act="match" data-i="${oi}"`}>
+        <div class="opt-chip-body opt-chip-body-sm">
+          <div class="opt-chip-han-sm han">${h(o.han)}</div>
+          <div class="opt-py">${h(o.py)}</div>
+        </div>
+      </button>`;
+  }).join('');
 
   return `
     <div class="pic-grid">${tiles}</div>
+    ${current !== -1
+      ? `<div class="q-prompt">Which word goes with the outlined picture?
+           <span class="q-count">${used.size + 1} of ${total}</span></div>`
+      : ''}
     <div class="opt-chips">${chips}</div>`;
+}
+
+/* Assigns the tapped word to whichever picture is currently outlined. Once
+   every picture has a word the question is settled: right only if all of
+   them landed correctly. */
+function matchPicture(oi) {
+  const q = S.qs[S.questionIndex];
+  if (S.answer !== null) return;
+
+  const cur = S.matches.findIndex(m => m == null);
+  if (cur === -1 || S.matches.includes(oi)) return;
+
+  S.matches[cur] = oi;
+
+  if (S.matches.every(m => m != null)) {
+    const allRight = S.matches.every((m, i) => m === i);
+    // -1 can never equal q.answer, so the banner reads it as wrong.
+    S.answer = allRight ? q.answer : -1;
+    if (allRight) S.exRight += 1;
+    markStudiedToday();
+    save();
+  }
+  render();
 }
 
 function renderListening(q, en, done) {
@@ -959,7 +1051,7 @@ function renderListening(q, en, done) {
       <div class="opt-row-body">
         <div class="opt-row-han han">${h(o.han)}</div>
         <div class="opt-row-py">${h(o.py)}</div>
-        ${en && o.en ? `<div class="opt-en">· ${h(o.en)}</div>` : ''}
+        ${(en || done) && o.en ? `<div class="opt-en">· ${h(o.en)}</div>` : ''}
       </div>
     </button>`).join('');
 
@@ -979,7 +1071,7 @@ function renderReading(q, en, done) {
       <div class="opt-row-body">
         <div class="opt-row-han han">${h(o.han)}</div>
         <div class="opt-row-py">${h(o.py)}</div>
-        ${en && o.en ? `<div class="opt-en">· ${h(o.en)}</div>` : ''}
+        ${(en || done) && o.en ? `<div class="opt-en">· ${h(o.en)}</div>` : ''}
       </div>
     </button>`).join('');
 
@@ -987,7 +1079,7 @@ function renderReading(q, en, done) {
     <div class="q-card">
       <div class="q-passage han">${charSpans(q.han)}</div>
       <div class="q-py">${h(q.py)}</div>
-      ${en ? `<div class="q-en">${h(q.en)}</div>` : ''}
+      ${en || done ? `<div class="q-en">${h(q.en)}</div>` : ''}
     </div>
     <div class="q-prompt">${h(q.prompt)}</div>
     <div class="opt-list">${rows}</div>`;
@@ -1015,6 +1107,7 @@ function nextQuestion() {
   }
   S.questionIndex += 1;
   S.answer = null;
+  prepQuestion();
   render();
   speakQuestion();
 }
@@ -1312,13 +1405,19 @@ $app.addEventListener('click', ev => {
 
     case 'drill-lesson': {
       const n = Number(target.dataset.les);
-      startDrill(wordsIn(S.level, n), `Lesson ${n}`);
+      startDrill(wordsIn(S.level, n), `Lesson ${n}`, n);
       break;
     }
 
     case 'drill-new': {
       const fresh = unseenIn(S.level);
       startDrill(fresh, `New · ${fresh.length}`);
+      break;
+    }
+
+    case 'drill-next': {
+      const les = nextLesson();
+      if (les) startDrill(wordsIn(S.level, les.n), `Lesson ${les.n}`, les.n);
       break;
     }
 
@@ -1353,6 +1452,10 @@ $app.addEventListener('click', ev => {
 
     case 'answer':
       answerQuestion(Number(target.dataset.i));
+      break;
+
+    case 'match':
+      matchPicture(Number(target.dataset.i));
       break;
 
     case 'next-q':

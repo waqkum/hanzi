@@ -74,6 +74,18 @@ The read-along prefers the utterance's `boundary` events, which give exact
 character positions. Many zh-CN voices never fire them, so a timed sweep
 (`CHAR_MS`) runs alongside and stands down the moment a real boundary arrives.
 
+## Answering
+
+Once a question is answered its English translation appears whether or not the
+English toggle is on — the toggle governs whether you get help *before*
+committing, not whether you can check afterwards.
+
+Picture questions match **every** tile, one at a time: the outlined picture
+takes the next word you tap, and the question settles only when all of them
+have one. It counts as right only if every pair landed. A missed one names the
+pairs that went astray rather than showing the single authored explanation,
+which can't describe a four-way match.
+
 ## Scheduling
 
 Tap a card to reveal it. Once revealed:

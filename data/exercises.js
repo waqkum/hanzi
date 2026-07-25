@@ -9,9 +9,14 @@
    ── Question shapes ───────────────────────────────────────────────────
    fill      { type, label, pre, post, py, en, options[{han,py}], answer, why{right,wrong} }
                `pre` / `post` are the sentence either side of the blank.
-   picture   { type, label, tiles[{glyph,alt}], target, options[{han,py}], answer, why }
-               `tiles` are placeholder art until real photos are dropped in;
-               `target` is the index of the tile the question points at.
+   picture   { type, label, tiles[{glyph,alt}], options[{han,py}], answer, why }
+               Every picture gets matched, one after another. **tiles[i] must
+               pair with options[i]** — that is how a match is judged correct,
+               so keep the two arrays in step when editing. The chips are
+               shuffled on screen, so the pairing is never positional.
+               `tiles` are placeholder art until real photos are dropped in.
+               `answer` is only used to phrase the verdict; `target` is no
+               longer read.
    listening { type, label, audio, prompt, options[{han,py,en}], answer, why }
                `audio` is the Chinese that gets spoken (speech synthesis,
                zh-CN, 0.75× rate). Swap for an <audio src> when you have
