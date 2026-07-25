@@ -1087,7 +1087,15 @@ function renderTrueFalse(q, en, done) {
       </div>
     </button>`).join('');
 
+  /* Listening Part I shows a picture and asks whether the sentence you
+     hear describes it, so those carry a glyph as well as the sentence. */
+  const pic = q.glyph ? `
+    <div class="tf-pic">
+      <span class="pic-glyph" role="img" aria-label="${h(q.glyphAlt || '')}">${q.glyph}</span>
+    </div>` : '';
+
   return `
+    ${pic}
     <div class="q-card">
       <div class="q-passage han">${charSpans(q.han)}</div>
       <div class="q-py">${h(q.py)}</div>

@@ -1182,6 +1182,17 @@ button {
 .claim .q-py,
 .claim .q-en { margin-top: 3px; }
 
+/* The picture a Listening Part I sentence is judged against. */
+.tf-pic {
+  aspect-ratio: 2.2;
+  border-radius: var(--r-row);
+  background: var(--placeholder);
+  display: grid;
+  place-items: center;
+  margin-top: 10px;
+  flex: none;
+}
+
 .pic-glyph {
   font-size: 44px;
   font-weight: 300;
