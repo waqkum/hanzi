@@ -541,17 +541,77 @@ button {
   display: flex;
 }
 
-/* Blank on purpose — it suggests a deck without letting you read the next
-   word before you've judged this one. JS drives scale/opacity mid-drag. */
+/* Blocked-out shapes rather than the real word — it reads as the next card
+   in the deck without giving the answer away. JS drives scale/opacity as
+   you drag; the geometry below mirrors the front face's layout. */
 .card-peek {
   position: absolute;
   inset: 0;
   border-radius: 28px;
   background: var(--white);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
   opacity: 0;
   transform: scale(.93) translateY(12px);
   transition: transform 260ms var(--ease), opacity 260ms var(--ease);
   pointer-events: none;
+}
+
+.peek-block { background: rgba(14, 14, 14, .07); }
+
+.peek-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: none;
+}
+
+/* Matches the status tag ("NEW" / "SEEN 4×") */
+.peek-tag {
+  width: 62px;
+  height: 10px;
+  border-radius: var(--r-pill);
+}
+
+/* Matches the 30×30 audio affordance */
+.peek-audio {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+}
+
+.peek-centre {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* Where the 100px character sits */
+.peek-han {
+  width: 118px;
+  height: 86px;
+  border-radius: 20px;
+}
+
+/* Where the pinyin line sits */
+.peek-py {
+  width: 76px;
+  height: 12px;
+  border-radius: var(--r-pill);
+}
+
+/* Where "Tap to reveal" sits */
+.peek-hint {
+  width: 88px;
+  height: 10px;
+  border-radius: var(--r-pill);
+  margin: 0 auto;
+  flex: none;
 }
 
 .card-wrap {

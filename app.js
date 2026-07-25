@@ -549,9 +549,20 @@ function renderDrill() {
 
     <div class="card-stack">
       <!-- Sits behind the live card and rises into view as you drag, so a
-           swipe feels like lifting the top card off a deck. No content:
-           the next word shouldn't be legible before you've judged this one. -->
-      <div class="card-peek"></div>
+           swipe feels like lifting the top card off a deck. Blocked-out
+           shapes rather than real content: they show where the next card's
+           parts will land without giving the word away early. -->
+      <div class="card-peek" aria-hidden="true">
+        <div class="peek-top">
+          <div class="peek-block peek-tag"></div>
+          <div class="peek-block peek-audio"></div>
+        </div>
+        <div class="peek-centre">
+          <div class="peek-block peek-han"></div>
+          <div class="peek-block peek-py"></div>
+        </div>
+        <div class="peek-block peek-hint"></div>
+      </div>
 
       <div class="card-wrap${entering ? ' is-entering' : ''}" data-act="flip">
         <div class="card-inner${S.flipped ? ' is-flipped' : ''}">
@@ -600,8 +611,12 @@ function renderDrill() {
    deliberate "I didn't know that". */
 function tapCard() {
   if (!S.flipped) {
+    const card = S.cards[S.cardIndex];
     S.flipped = true;
-    markSeen(S.cards[S.cardIndex]);
+    markSeen(card);
+    // Say the word as it turns over. This runs inside the tap handler on
+    // purpose — iOS only allows speech synthesis from a user gesture.
+    speak(card.han);
     render();
     return;
   }
@@ -1067,6 +1082,7 @@ function render() {
    ══════════════════════════════════════════════════════════════════════ */
 
 const SWIPE_HINT = 34;            // px of travel before the colour hint shows
+const FLING_MS   = 300;           // must outlast the fling transition, see endDrag
 let drag = null;
 let swipedAt = 0;                 // suppresses the click that follows a swipe
 
@@ -1126,17 +1142,35 @@ function endDrag(cancelled) {
 
   if (!cancelled && Math.abs(dx) >= swipeThreshold(wrap)) {
     const dir = dx > 0 ? 1 : -1;
-    // Fling it off the way it was heading, shrinking slightly as it goes.
+
+    /* Fling it clear off the screen. No opacity fade — a card that
+       dissolves while still on screen reads as disappearing rather than
+       being thrown — and the curve accelerates out instead of the usual
+       ease-out so it keeps its momentum. */
+    wrap.style.transition = `transform ${FLING_MS}ms cubic-bezier(.4, 0, 1, 1)`;
     wrap.style.transform =
-      `translateX(${dir * 135}%) rotate(${dir * 18}deg) scale(.9)`;
-    wrap.style.opacity = '0';
+      `translateX(${dir * 160}%) rotate(${dir * 20}deg) scale(.92)`;
+
     // Settle the card underneath into place while the top one is leaving.
     if (peek) {
       peek.style.opacity = '1';
       peek.style.transform = 'scale(1) translateY(0)';
     }
-    // Left is correct, right is incorrect.
-    setTimeout(() => advanceCard(dir < 0), 200);
+
+    /* Wait for the transition to actually finish before re-rendering.
+       Timing the swap on a matching setTimeout races the animation, and
+       losing that race is what made the card look like it vanished
+       part-way across. The timer is only a fallback for the case where
+       transitionend never fires (interrupted transition, hidden tab). */
+    let advanced = false;
+    const done = () => {
+      if (advanced) return;
+      advanced = true;
+      wrap.removeEventListener('transitionend', done);
+      advanceCard(dir < 0);          // left is correct, right is incorrect
+    };
+    wrap.addEventListener('transitionend', done);
+    setTimeout(done, FLING_MS + 120);
     return;
   }
 

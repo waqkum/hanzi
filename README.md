@@ -69,10 +69,16 @@ Tap a card to reveal it. Once revealed:
 - **swipe right** — incorrect; the card comes back `REQUEUE_GAP` places later
   in the same session
 
+Revealing a card also speaks the word (zh-CN, 0.75×). The ♪ button still
+replays it, and on the revealed face speaks the example sentence instead.
+
 The card follows your finger, rotating and shrinking slightly, and tints past
-the threshold: lime for correct, blush for incorrect. A blank card peeks out
-from behind as the top one leaves, and the next card rises into its place.
-Below the threshold everything springs back.
+the threshold: lime for correct, blush for incorrect. Past the threshold it
+flings clear off the screen; the swap waits on `transitionend` rather than a
+timer, so the animation always completes. Behind it a skeleton card — blocked
+-out shapes where the tag, audio button, character, pinyin and hint will land
+— rises into place, and the next card picks up from there. Below the threshold
+everything springs back.
 
 Revealing is what marks a word seen, so a card still counts if you stop
 mid-session. A word is **held** after 3 correct in a row; a single incorrect
