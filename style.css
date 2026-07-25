@@ -672,12 +672,9 @@ button {
 
 .example-py { margin-top: 3px; }
 
-.rate-row {
-  display: flex;
-  gap: 9px;
-  margin-top: 12px;
-  flex: none;
-}
+/* Sits under the example block on the revealed face, mirroring the
+   "Tap to reveal" hint on the front so the second tap is discoverable. */
+.card-hint-back { margin-top: 14px; }
 
 /* ═══ 4. Session summary ══════════════════════════════════════════════ */
 

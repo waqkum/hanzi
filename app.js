@@ -11,10 +11,9 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 const SESSION_SIZE = 10;          // cards per drill session
-const HELD_STREAK  = 3;           // correct answers in a row before a word counts as "held"
-const SLIP_MISSES  = 2;           // misses that put a word in the slipping pile
+const HELD_SEEN    = 3;           // times a word must be seen before it counts as "held"
 
-/* Days to wait before a word is due again, indexed by current streak. */
+/* Days to wait before a word comes round again, indexed by times seen. */
 const INTERVALS = [0, 1, 3, 7, 16, 35];
 
 /* Placeholder art for generated picture questions. The workbook's own
@@ -130,52 +129,47 @@ function markStudiedToday() {
    ══════════════════════════════════════════════════════════════════════ */
 
 function ws(id) {
-  return store.words[id] || (store.words[id] = { seen: 0, miss: 0, streak: 0, last: null });
+  return store.words[id] || (store.words[id] = { seen: 0, last: null });
 }
 
-const isNew      = w => ws(w.id).seen === 0;
-const isHeld     = w => ws(w.id).streak >= HELD_STREAK;
-const isSlipping = w => { const s = ws(w.id); return s.miss >= SLIP_MISSES && s.streak < 2; };
+const isNew  = w => ws(w.id).seen === 0;
+const isHeld = w => ws(w.id).seen >= HELD_SEEN;
 
 function isDue(w) {
   const s = ws(w.id);
   if (s.seen === 0) return true;
-  return daysSince(s.last) >= INTERVALS[Math.min(s.streak, INTERVALS.length - 1)];
+  return daysSince(s.last) >= INTERVALS[Math.min(s.seen, INTERVALS.length - 1)];
 }
 
 function tagFor(w) {
   const s = ws(w.id);
-  if (s.seen === 0)  return 'NEW';
-  if (isSlipping(w)) return 'SLIPPING';
-  return `SEEN ${s.seen}×`;
+  return s.seen === 0 ? 'NEW' : `SEEN ${s.seen}×`;
 }
 
-function grade(w, correct) {
+/* A card counts as studied the moment you reveal it. There is no
+   right/wrong signal — the drill is a flip-through, so scheduling is
+   driven purely by how many times you have looked at a word and when. */
+function markSeen(w) {
   const s = ws(w.id);
   s.seen += 1;
-  if (correct) {
-    s.streak += 1;
-    s.last = todayISO();
-  } else {
-    s.miss += 1;
-    s.streak = 0;
-  }
+  s.last = todayISO();
   markStudiedToday();
   save();
 }
 
 /* ── Word sets ──────────────────────────────────────────────────────── */
 
-const wordsIn      = (lv, les) => VOCAB.filter(w => w.level === lv && (les == null || w.les === les));
-const slippingList = ()        => VOCAB.filter(isSlipping);
-const dueList      = lv        => wordsIn(lv).filter(isDue);
+const wordsIn  = (lv, les) => VOCAB.filter(w => w.level === lv && (les == null || w.les === les));
+const dueList  = lv        => wordsIn(lv).filter(isDue);
+const unseenIn = lv        => wordsIn(lv).filter(isNew);
 
-/* Build a session: due cards first, weighted toward slipping ones. */
+/* Build a session: unseen words first, then whatever is due, least
+   recently looked at leading. */
 function buildSession(pool) {
-  const slip  = pool.filter(isSlipping);
-  const fresh = pool.filter(w => isNew(w) && !isSlipping(w));
-  const rest  = pool.filter(w => !isSlipping(w) && !isNew(w) && isDue(w));
-  const ordered = [...shuffle(slip), ...shuffle(fresh), ...shuffle(rest)];
+  const fresh = pool.filter(isNew);
+  const rest  = pool.filter(w => !isNew(w) && isDue(w))
+    .sort((a, b) => (ws(a.id).last || '').localeCompare(ws(b.id).last || ''));
+  const ordered = [...shuffle(fresh), ...rest];
   // If nothing is due, fall back to the whole pool so a session is always possible.
   const cards = ordered.length ? ordered : shuffle(pool);
   return cards.slice(0, SESSION_SIZE);
@@ -246,7 +240,6 @@ let S = {
   cardIndex: 0,
   flipped: false,
   pinyinOn: true,
-  gotCount: 0,
   newToday: [],
   startedAt: 0,
   lastMs: 0,
@@ -397,7 +390,7 @@ function renderHome() {
   const les   = LESSONS[lv][CURRENT.lesson - 1];
   const total = wordsIn(lv).length;
   const held  = heldCount(lv);
-  const slip  = slippingList().length;
+  const fresh = unseenIn(lv).length;
   const days  = streakDays();
 
   return `
@@ -440,7 +433,7 @@ function renderHome() {
       </div>
       <div>
         <div class="home-card-title">Progress</div>
-        <div class="home-card-sub">${days} day streak · ${slip} slipping</div>
+        <div class="home-card-sub">${days} day streak · ${fresh} still new</div>
       </div>
     </button>`;
 }
@@ -487,7 +480,7 @@ function renderSets() {
       </button>`;
   }).join('');
 
-  const slip = slippingList().length;
+  const fresh = unseenIn(S.level).length;
 
   return `
     ${backHeader('home', 'Home', '<div class="hdr-meta">Flashcards</div>')}
@@ -497,10 +490,10 @@ function renderSets() {
     <div class="rows rows-scroll">${rows}</div>
     <div class="foot-card">
       <div class="foot-card-text">
-        ${slip ? `Just the ${slip} word${slip === 1 ? '' : 's'} I keep missing`
-               : 'Nothing slipping yet — keep going'}
+        ${fresh ? `The ${fresh} word${fresh === 1 ? '' : 's'} I haven’t seen yet`
+                : `Every ${LEVEL_LABEL[S.level]} word has been round at least once`}
       </div>
-      ${slip ? `<button class="btn-drill" data-act="drill-slipping">Drill<span class="dot"></span></button>` : ''}
+      ${fresh ? `<button class="btn-drill" data-act="drill-new">Drill<span class="dot"></span></button>` : ''}
     </div>`;
 }
 
@@ -513,7 +506,7 @@ function startDrill(pool, label) {
   if (!cards.length) return;
   Object.assign(S, {
     setLabel: label, cards, cardIndex: 0, flipped: false,
-    gotCount: 0, newToday: cards.filter(isNew), startedAt: Date.now(),
+    newToday: cards.filter(isNew), startedAt: Date.now(),
   });
   go('drill');
 }
@@ -521,6 +514,7 @@ function startDrill(pool, label) {
 function renderDrill() {
   const card  = S.cards[S.cardIndex];
   const total = S.cards.length;
+  const last  = S.cardIndex + 1 >= total;
   const pct   = ((S.cardIndex + (S.flipped ? 1 : 0)) / total) * 100;
 
   return `
@@ -562,26 +556,28 @@ function renderDrill() {
             <div class="example-py">${h(card.exPy)}</div>
             <div class="example-en">${h(card.exEn)}</div>
           </div>
+          <div class="card-hint card-hint-back">${last ? 'Tap to finish' : 'Tap for the next one'}</div>
         </div>
 
       </div>
-    </div>
-
-    <div class="rate-row">
-      <button class="btn btn-ghost" data-act="rate" data-ok="0">Again</button>
-      <button class="btn btn-ink"   data-act="rate" data-ok="1">Got it</button>
     </div>`;
 }
 
-function rate(ok) {
-  grade(S.cards[S.cardIndex], ok);
-  if (ok) S.gotCount += 1;
+/* Tap once to reveal, tap again to move on. The reveal is what marks the
+   word as seen, so a card still counts if you stop mid-session. */
+function tapCard() {
+  if (!S.flipped) {
+    S.flipped = true;
+    markSeen(S.cards[S.cardIndex]);
+    render();
+    return;
+  }
 
   if (S.cardIndex + 1 >= S.cards.length) {
     S.lastMs = Date.now() - S.startedAt;
     store.sessions.push({
       date: todayISO(), ms: S.lastMs,
-      got: S.gotCount, missed: S.cards.length - S.gotCount,
+      cards: S.cards.length, fresh: S.newToday.length,
     });
     save();
     go('summary');
@@ -597,7 +593,6 @@ function rate(ok) {
    ══════════════════════════════════════════════════════════════════════ */
 
 function renderSummary() {
-  const missed = S.cards.length - S.gotCount;
   const rows = S.newToday.length
     ? S.newToday.map(w => `
         <div class="word-line">
@@ -617,12 +612,12 @@ function renderSummary() {
 
     <div class="stat-pair">
       <div class="stat-card stat-card-lime">
-        <div class="stat-num">${S.gotCount}</div>
-        <div class="stat-label">got it</div>
+        <div class="stat-num">${S.cards.length}</div>
+        <div class="stat-label">card${S.cards.length === 1 ? '' : 's'} through</div>
       </div>
       <div class="stat-card stat-card-white">
-        <div class="stat-num">${missed}</div>
-        <div class="stat-label">back in the pile</div>
+        <div class="stat-num">${S.newToday.length}</div>
+        <div class="stat-label">seen for the first time</div>
       </div>
     </div>
 
@@ -936,20 +931,20 @@ function renderProgress() {
       </div>`;
   }).join('');
 
-  const slip = slippingList();
-  const slipCard = slip.length ? `
-    <button class="bento-slip bento-wide" data-act="drill-slipping">
+  const fresh = unseenIn(lv);
+  const freshCard = fresh.length ? `
+    <button class="bento-slip bento-wide" data-act="drill-new">
       <div class="slip-body">
-        <div class="label label-on-ink">${slip.length} KEEP SLIPPING</div>
-        <div class="slip-han han">${slip.slice(0, 4).map(w => h(w.han)).join(' ')}</div>
-        <div class="slip-py">${slip.slice(0, 4).map(w => h(w.py)).join(' · ')}</div>
+        <div class="label label-on-ink">${fresh.length} NOT SEEN YET</div>
+        <div class="slip-han han">${fresh.slice(0, 4).map(w => h(w.han)).join(' ')}</div>
+        <div class="slip-py">${fresh.slice(0, 4).map(w => h(w.py)).join(' · ')}</div>
       </div>
       <div class="btn-drill btn-drill-lime">Drill<span class="dot"></span></div>
     </button>` : `
     <div class="bento-slip bento-wide">
       <div class="slip-body">
-        <div class="label label-on-ink">NOTHING SLIPPING</div>
-        <div class="slip-py" style="margin-top:5px">Everything you’ve seen is holding.</div>
+        <div class="label label-on-ink">ALL THE WAY THROUGH</div>
+        <div class="slip-py" style="margin-top:5px">Every ${LEVEL_LABEL[lv]} word has been round at least once.</div>
       </div>
     </div>`;
 
@@ -984,7 +979,7 @@ function renderProgress() {
         ${chapters}
       </div>
 
-      ${slipCard}
+      ${freshCard}
     </div>`;
 }
 
@@ -1038,15 +1033,14 @@ $app.addEventListener('click', ev => {
       break;
     }
 
-    case 'drill-slipping': {
-      const slip = slippingList();
-      startDrill(slip, `Slipping · ${slip.length}`);
+    case 'drill-new': {
+      const fresh = unseenIn(S.level);
+      startDrill(fresh, `New · ${fresh.length}`);
       break;
     }
 
     case 'flip':
-      S.flipped = !S.flipped;
-      render();
+      tapCard();
       break;
 
     case 'toggle-pinyin':
@@ -1058,10 +1052,6 @@ $app.addEventListener('click', ev => {
     case 'say':
       ev.stopPropagation();
       speak(target.dataset.text);
-      break;
-
-    case 'rate':
-      rate(target.dataset.ok === '1');
       break;
 
     case 'run':

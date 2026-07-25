@@ -63,12 +63,16 @@ Standard Course lesson it's introduced in, and an example sentence.
 
 ## Scheduling
 
-A word is **held** after 3 correct answers in a row, and **slipping** after 2
-misses without recovering. Review intervals by streak: 0, 1, 3, 7, 16, 35 days.
-Sessions are 10 cards, drawn slipping-first, then new, then due.
+The drill is a flip-through: tap once to reveal a card, tap again to move on.
+There is no right/wrong button, so there is **no correctness signal** —
+scheduling runs purely on exposure. Revealing a card is what marks it seen, so
+a card still counts if you stop mid-session.
 
-Tunable at the top of `app.js` (`SESSION_SIZE`, `HELD_STREAK`, `SLIP_MISSES`,
-`INTERVALS`).
+A word is **held** once it has been seen 3 times. Intervals before it comes
+round again, by times seen: 0, 1, 3, 7, 16, 35 days. Sessions are 10 cards,
+unseen words first, then whatever is due, least recently seen leading.
+
+Tunable at the top of `app.js` (`SESSION_SIZE`, `HELD_SEEN`, `INTERVALS`).
 
 ## Progress data
 
