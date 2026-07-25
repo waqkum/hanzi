@@ -65,15 +65,17 @@ Standard Course lesson it's introduced in, and an example sentence.
 
 Tap a card to reveal it. Once revealed:
 
-- **swipe right** (or tap again) — you knew it, move on
-- **swipe left** — you didn't; the card comes back `REQUEUE_GAP` places later
+- **swipe left** (or tap again) — correct, move on
+- **swipe right** — incorrect; the card comes back `REQUEUE_GAP` places later
   in the same session
 
-The card follows your finger and tints as you drag: lime past the threshold to
-the right, blush to the left. Below the threshold it springs back.
+The card follows your finger, rotating and shrinking slightly, and tints past
+the threshold: lime for correct, blush for incorrect. A blank card peeks out
+from behind as the top one leaves, and the next card rises into its place.
+Below the threshold everything springs back.
 
 Revealing is what marks a word seen, so a card still counts if you stop
-mid-session. A word is **held** after 3 continues in a row; a single "again"
+mid-session. A word is **held** after 3 correct in a row; a single incorrect
 resets that run, so the word is due again the next day. Intervals by run
 length: 0, 1, 3, 7, 16, 35 days. Sessions are 10 cards, unseen words first,
 then whatever is due, least recently seen leading.

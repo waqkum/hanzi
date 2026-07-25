@@ -532,24 +532,54 @@ button {
   transition: width 300ms var(--ease);
 }
 
+/* Holds the live card over the one peeking out behind it. */
+.card-stack {
+  flex: 1;
+  min-height: 0;
+  margin-top: 12px;
+  position: relative;
+  display: flex;
+}
+
+/* Blank on purpose — it suggests a deck without letting you read the next
+   word before you've judged this one. JS drives scale/opacity mid-drag. */
+.card-peek {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background: var(--white);
+  opacity: 0;
+  transform: scale(.93) translateY(12px);
+  transition: transform 260ms var(--ease), opacity 260ms var(--ease);
+  pointer-events: none;
+}
+
 .card-wrap {
+  position: relative;      /* stacks above .card-peek */
   flex: 1;
   min-height: 0;
   perspective: 1400px;
-  margin-top: 12px;
   display: flex;
   /* Horizontal drag belongs to the card; vertical still scrolls the page. */
   touch-action: pan-y;
-  transition: transform 260ms var(--ease), opacity 190ms var(--ease);
+  transition: transform 260ms var(--ease), opacity 200ms var(--ease);
 }
 
-/* Colour hint while dragging, using the palette's own semantics:
-   lime is the "go" colour, blush only ever means back in the pile. */
-.card-wrap[data-swipe='go']   .face-back { background: var(--lime); }
-.card-wrap[data-swipe='back'] .face-back { background: var(--blush); }
+/* Colour hint while dragging, using the palette's own semantics: lime is
+   the "right" colour, blush only ever means wrong. */
+.card-wrap[data-swipe='correct']   .face-back { background: var(--lime); }
+.card-wrap[data-swipe='incorrect'] .face-back { background: var(--blush); }
 
-.card-wrap[data-swipe='go']   .hint-go   { color: var(--ink); font-weight: 600; }
-.card-wrap[data-swipe='back'] .hint-back { color: var(--clay); font-weight: 600; }
+.card-wrap[data-swipe='correct']   .hint-ok { color: var(--ink); font-weight: 600; }
+.card-wrap[data-swipe='incorrect'] .hint-no { color: var(--clay); font-weight: 600; }
+
+/* The next card rises into place, picking up where the peek left off. */
+@keyframes card-in {
+  from { transform: scale(.93) translateY(12px); opacity: .4; }
+  to   { transform: none; opacity: 1; }
+}
+
+.card-wrap.is-entering { animation: card-in 260ms var(--ease); }
 
 .card-inner {
   flex: 1;
@@ -702,8 +732,8 @@ button {
   gap: 8px;
 }
 
-.hint-back,
-.hint-go { transition: color 180ms var(--ease); }
+.hint-ok,
+.hint-no { transition: color 180ms var(--ease); }
 
 .hint-sep { color: var(--ink-20); }
 

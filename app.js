@@ -257,6 +257,7 @@ let S = {
   pinyinOn: true,
   newToday: [],
   againCount: 0,
+  entering: false,
   startedAt: 0,
   lastMs: 0,
 
@@ -418,7 +419,7 @@ function renderHome() {
       <div class="hdr-meta">${LEVEL_LABEL[lv]} · day ${days || 1}</div>
     </div>
 
-    <div class="hero"><div class="hero-text">Three things.<br>Pick one.</div></div>
+    <div class="hero"><div class="hero-text">Do your<br>homework.</div></div>
 
     <button class="home-card home-card-a" data-act="sets">
       <div class="home-card-top">
@@ -530,8 +531,12 @@ function startDrill(pool, label) {
 function renderDrill() {
   const card  = S.cards[S.cardIndex];
   const total = S.cards.length;
-  const last  = S.cardIndex + 1 >= total;
   const pct   = ((S.cardIndex + (S.flipped ? 1 : 0)) / total) * 100;
+
+  // One-shot: only animate the card in when we've actually moved on, not
+  // on every re-render (a flip or a pinyin toggle rebuilds this markup too).
+  const entering = S.entering;
+  S.entering = false;
 
   return `
     ${backHeader('sets', S.setLabel, `
@@ -542,8 +547,14 @@ function renderDrill() {
 
     <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
 
-    <div class="card-wrap" data-act="flip">
-      <div class="card-inner${S.flipped ? ' is-flipped' : ''}">
+    <div class="card-stack">
+      <!-- Sits behind the live card and rises into view as you drag, so a
+           swipe feels like lifting the top card off a deck. No content:
+           the next word shouldn't be legible before you've judged this one. -->
+      <div class="card-peek"></div>
+
+      <div class="card-wrap${entering ? ' is-entering' : ''}" data-act="flip">
+        <div class="card-inner${S.flipped ? ' is-flipped' : ''}">
 
         <div class="face face-front">
           <div class="face-top">
@@ -573,18 +584,19 @@ function renderDrill() {
             <div class="example-en">${h(card.exEn)}</div>
           </div>
           <div class="card-hint card-hint-back">
-            <span class="hint-back">←&nbsp;again</span>
+            <span class="hint-ok">←&nbsp;correct</span>
             <span class="hint-sep">·</span>
-            <span class="hint-go">${last ? 'finish' : 'continue'}&nbsp;→</span>
+            <span class="hint-no">incorrect&nbsp;→</span>
           </div>
         </div>
 
+        </div>
       </div>
     </div>`;
 }
 
-/* Tap reveals. Once revealed, a tap is the same as swiping right — the
-   quick path stays a single finger in one place — and swiping left is the
+/* Tap reveals. Once revealed, a tap counts the card correct — the quick
+   path stays a single finger in one place — and swiping right is the
    deliberate "I didn't know that". */
 function tapCard() {
   if (!S.flipped) {
@@ -596,12 +608,12 @@ function tapCard() {
   advanceCard(true);
 }
 
-/* known === false re-queues the card a few places later, so an "again"
-   comes back before the session is out. */
-function advanceCard(known) {
+/* correct === false re-queues the card a few places later, so a word you
+   missed comes back before the session is out. */
+function advanceCard(correct) {
   const card = S.cards[S.cardIndex];
 
-  if (known) {
+  if (correct) {
     markContinue(card);
   } else {
     markAgain(card);
@@ -609,6 +621,8 @@ function advanceCard(known) {
     const at = Math.min(S.cardIndex + 1 + REQUEUE_GAP, S.cards.length);
     S.cards.splice(at, 0, card);
   }
+
+  S.entering = true;
 
   if (S.cardIndex + 1 >= S.cards.length) {
     S.lastMs = Date.now() - S.startedAt;
@@ -1045,14 +1059,14 @@ function render() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   Card swipe — right to continue, left to see it again
+   Card swipe — left is correct, right is incorrect
 
    Pointer events so one code path covers touch and mouse. The drag is
    applied to .card-wrap rather than .card-inner, because .card-inner
    already owns the rotateY flip and the two transforms would fight.
    ══════════════════════════════════════════════════════════════════════ */
 
-const SWIPE_HINT = 40;            // px of travel before the colour hint shows
+const SWIPE_HINT = 34;            // px of travel before the colour hint shows
 let drag = null;
 let swipedAt = 0;                 // suppresses the click that follows a swipe
 
@@ -1064,7 +1078,10 @@ $app.addEventListener('pointerdown', ev => {
   if (S.screen !== 'drill' || !S.flipped) return;      // only once revealed
   const wrap = ev.target.closest('.card-wrap');
   if (!wrap || ev.target.closest('[data-act="say"]')) return;
-  drag = { x0: ev.clientX, y0: ev.clientY, dx: 0, wrap, moved: false };
+  drag = {
+    x0: ev.clientX, y0: ev.clientY, dx: 0, wrap, moved: false,
+    peek: wrap.parentElement.querySelector('.card-peek'),
+  };
 });
 
 $app.addEventListener('pointermove', ev => {
@@ -1076,32 +1093,58 @@ $app.addEventListener('pointermove', ev => {
 
   drag.moved = true;
   drag.dx = dx;
+
+  // How far through the gesture we are, 0…1.
+  const t = Math.min(1, Math.abs(dx) / swipeThreshold(drag.wrap));
+
   drag.wrap.style.transition = 'none';
-  drag.wrap.style.transform = `translateX(${dx}px) rotate(${dx / 30}deg)`;
+  drag.wrap.style.transform =
+    `translateX(${dx}px) rotate(${dx / 26}deg) scale(${1 - t * 0.04})`;
   drag.wrap.dataset.swipe =
-    dx > SWIPE_HINT ? 'go' : dx < -SWIPE_HINT ? 'back' : '';
+    dx < -SWIPE_HINT ? 'correct' : dx > SWIPE_HINT ? 'incorrect' : '';
+
+  // The card underneath rises to meet you as the top one leaves.
+  if (drag.peek) {
+    drag.peek.style.transition = 'none';
+    drag.peek.style.opacity = String(t);
+    drag.peek.style.transform =
+      `scale(${0.93 + t * 0.07}) translateY(${(1 - t) * 12}px)`;
+  }
 });
 
 function endDrag(cancelled) {
   if (!drag) return;
-  const { wrap, dx, moved } = drag;
+  const { wrap, dx, moved, peek } = drag;
   drag = null;
 
   wrap.style.transition = '';
   delete wrap.dataset.swipe;
+  if (peek) peek.style.transition = '';
 
   if (!moved) return;
   swipedAt = Date.now();
 
   if (!cancelled && Math.abs(dx) >= swipeThreshold(wrap)) {
     const dir = dx > 0 ? 1 : -1;
-    wrap.style.transform = `translateX(${dir * 120}%) rotate(${dir * 14}deg)`;
+    // Fling it off the way it was heading, shrinking slightly as it goes.
+    wrap.style.transform =
+      `translateX(${dir * 135}%) rotate(${dir * 18}deg) scale(.9)`;
     wrap.style.opacity = '0';
-    // Let the card clear the screen before the next one renders in.
-    setTimeout(() => advanceCard(dir > 0), 190);
+    // Settle the card underneath into place while the top one is leaving.
+    if (peek) {
+      peek.style.opacity = '1';
+      peek.style.transform = 'scale(1) translateY(0)';
+    }
+    // Left is correct, right is incorrect.
+    setTimeout(() => advanceCard(dir < 0), 200);
     return;
   }
+
   wrap.style.transform = '';       // spring back
+  if (peek) {
+    peek.style.opacity = '';
+    peek.style.transform = '';
+  }
 }
 
 $app.addEventListener('pointerup', () => endDrag(false));
