@@ -63,16 +63,23 @@ Standard Course lesson it's introduced in, and an example sentence.
 
 ## Scheduling
 
-The drill is a flip-through: tap once to reveal a card, tap again to move on.
-There is no right/wrong button, so there is **no correctness signal** —
-scheduling runs purely on exposure. Revealing a card is what marks it seen, so
-a card still counts if you stop mid-session.
+Tap a card to reveal it. Once revealed:
 
-A word is **held** once it has been seen 3 times. Intervals before it comes
-round again, by times seen: 0, 1, 3, 7, 16, 35 days. Sessions are 10 cards,
-unseen words first, then whatever is due, least recently seen leading.
+- **swipe right** (or tap again) — you knew it, move on
+- **swipe left** — you didn't; the card comes back `REQUEUE_GAP` places later
+  in the same session
 
-Tunable at the top of `app.js` (`SESSION_SIZE`, `HELD_SEEN`, `INTERVALS`).
+The card follows your finger and tints as you drag: lime past the threshold to
+the right, blush to the left. Below the threshold it springs back.
+
+Revealing is what marks a word seen, so a card still counts if you stop
+mid-session. A word is **held** after 3 continues in a row; a single "again"
+resets that run, so the word is due again the next day. Intervals by run
+length: 0, 1, 3, 7, 16, 35 days. Sessions are 10 cards, unseen words first,
+then whatever is due, least recently seen leading.
+
+Tunable at the top of `app.js` (`SESSION_SIZE`, `HELD_OK`, `REQUEUE_GAP`,
+`INTERVALS`).
 
 ## Progress data
 

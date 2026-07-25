@@ -11,9 +11,11 @@
    ══════════════════════════════════════════════════════════════════════ */
 
 const SESSION_SIZE = 10;          // cards per drill session
-const HELD_SEEN    = 3;           // times a word must be seen before it counts as "held"
+const HELD_OK      = 3;           // continues in a row before a word counts as "held"
+const REQUEUE_GAP  = 3;           // cards to wait before an "again" card comes back
 
-/* Days to wait before a word comes round again, indexed by times seen. */
+/* Days to wait before a word comes round again, indexed by its run of
+   continues. An "again" resets that run, so the word returns tomorrow. */
 const INTERVALS = [0, 1, 3, 7, 16, 35];
 
 /* Placeholder art for generated picture questions. The workbook's own
@@ -129,16 +131,16 @@ function markStudiedToday() {
    ══════════════════════════════════════════════════════════════════════ */
 
 function ws(id) {
-  return store.words[id] || (store.words[id] = { seen: 0, last: null });
+  return store.words[id] || (store.words[id] = { seen: 0, ok: 0, last: null });
 }
 
 const isNew  = w => ws(w.id).seen === 0;
-const isHeld = w => ws(w.id).seen >= HELD_SEEN;
+const isHeld = w => ws(w.id).ok >= HELD_OK;
 
 function isDue(w) {
   const s = ws(w.id);
   if (s.seen === 0) return true;
-  return daysSince(s.last) >= INTERVALS[Math.min(s.seen, INTERVALS.length - 1)];
+  return daysSince(s.last) >= INTERVALS[Math.min(s.ok, INTERVALS.length - 1)];
 }
 
 function tagFor(w) {
@@ -146,14 +148,27 @@ function tagFor(w) {
   return s.seen === 0 ? 'NEW' : `SEEN ${s.seen}×`;
 }
 
-/* A card counts as studied the moment you reveal it. There is no
-   right/wrong signal — the drill is a flip-through, so scheduling is
-   driven purely by how many times you have looked at a word and when. */
+/* Revealing a card counts as exposure regardless of how you then judge
+   it, so a word still registers if you stop mid-session. */
 function markSeen(w) {
   const s = ws(w.id);
   s.seen += 1;
   s.last = todayISO();
   markStudiedToday();
+  save();
+}
+
+/* Swipe right — you knew it. Extends the run of continues, which is what
+   lengthens the interval and eventually makes the word "held". */
+function markContinue(w) {
+  ws(w.id).ok += 1;
+  save();
+}
+
+/* Swipe left — you didn't. Resets the run so the word is due again
+   tomorrow, and comes back later in this same session. */
+function markAgain(w) {
+  ws(w.id).ok = 0;
   save();
 }
 
@@ -241,6 +256,7 @@ let S = {
   flipped: false,
   pinyinOn: true,
   newToday: [],
+  againCount: 0,
   startedAt: 0,
   lastMs: 0,
 
@@ -506,7 +522,7 @@ function startDrill(pool, label) {
   if (!cards.length) return;
   Object.assign(S, {
     setLabel: label, cards, cardIndex: 0, flipped: false,
-    newToday: cards.filter(isNew), startedAt: Date.now(),
+    newToday: cards.filter(isNew), againCount: 0, startedAt: Date.now(),
   });
   go('drill');
 }
@@ -556,15 +572,20 @@ function renderDrill() {
             <div class="example-py">${h(card.exPy)}</div>
             <div class="example-en">${h(card.exEn)}</div>
           </div>
-          <div class="card-hint card-hint-back">${last ? 'Tap to finish' : 'Tap for the next one'}</div>
+          <div class="card-hint card-hint-back">
+            <span class="hint-back">←&nbsp;again</span>
+            <span class="hint-sep">·</span>
+            <span class="hint-go">${last ? 'finish' : 'continue'}&nbsp;→</span>
+          </div>
         </div>
 
       </div>
     </div>`;
 }
 
-/* Tap once to reveal, tap again to move on. The reveal is what marks the
-   word as seen, so a card still counts if you stop mid-session. */
+/* Tap reveals. Once revealed, a tap is the same as swiping right — the
+   quick path stays a single finger in one place — and swiping left is the
+   deliberate "I didn't know that". */
 function tapCard() {
   if (!S.flipped) {
     S.flipped = true;
@@ -572,12 +593,28 @@ function tapCard() {
     render();
     return;
   }
+  advanceCard(true);
+}
+
+/* known === false re-queues the card a few places later, so an "again"
+   comes back before the session is out. */
+function advanceCard(known) {
+  const card = S.cards[S.cardIndex];
+
+  if (known) {
+    markContinue(card);
+  } else {
+    markAgain(card);
+    S.againCount += 1;
+    const at = Math.min(S.cardIndex + 1 + REQUEUE_GAP, S.cards.length);
+    S.cards.splice(at, 0, card);
+  }
 
   if (S.cardIndex + 1 >= S.cards.length) {
     S.lastMs = Date.now() - S.startedAt;
     store.sessions.push({
       date: todayISO(), ms: S.lastMs,
-      cards: S.cards.length, fresh: S.newToday.length,
+      cards: S.cards.length, fresh: S.newToday.length, again: S.againCount,
     });
     save();
     go('summary');
@@ -616,8 +653,8 @@ function renderSummary() {
         <div class="stat-label">card${S.cards.length === 1 ? '' : 's'} through</div>
       </div>
       <div class="stat-card stat-card-white">
-        <div class="stat-num">${S.newToday.length}</div>
-        <div class="stat-label">seen for the first time</div>
+        <div class="stat-num">${S.againCount}</div>
+        <div class="stat-label">back in the pile</div>
       </div>
     </div>
 
@@ -1008,6 +1045,70 @@ function render() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   Card swipe — right to continue, left to see it again
+
+   Pointer events so one code path covers touch and mouse. The drag is
+   applied to .card-wrap rather than .card-inner, because .card-inner
+   already owns the rotateY flip and the two transforms would fight.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const SWIPE_HINT = 40;            // px of travel before the colour hint shows
+let drag = null;
+let swipedAt = 0;                 // suppresses the click that follows a swipe
+
+function swipeThreshold(el) {
+  return Math.max(64, el.offsetWidth * 0.26);
+}
+
+$app.addEventListener('pointerdown', ev => {
+  if (S.screen !== 'drill' || !S.flipped) return;      // only once revealed
+  const wrap = ev.target.closest('.card-wrap');
+  if (!wrap || ev.target.closest('[data-act="say"]')) return;
+  drag = { x0: ev.clientX, y0: ev.clientY, dx: 0, wrap, moved: false };
+});
+
+$app.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  const dx = ev.clientX - drag.x0;
+  const dy = ev.clientY - drag.y0;
+  if (!drag.moved && Math.abs(dx) < 8) return;
+  if (!drag.moved && Math.abs(dy) > Math.abs(dx)) { drag = null; return; }
+
+  drag.moved = true;
+  drag.dx = dx;
+  drag.wrap.style.transition = 'none';
+  drag.wrap.style.transform = `translateX(${dx}px) rotate(${dx / 30}deg)`;
+  drag.wrap.dataset.swipe =
+    dx > SWIPE_HINT ? 'go' : dx < -SWIPE_HINT ? 'back' : '';
+});
+
+function endDrag(cancelled) {
+  if (!drag) return;
+  const { wrap, dx, moved } = drag;
+  drag = null;
+
+  wrap.style.transition = '';
+  delete wrap.dataset.swipe;
+
+  if (!moved) return;
+  swipedAt = Date.now();
+
+  if (!cancelled && Math.abs(dx) >= swipeThreshold(wrap)) {
+    const dir = dx > 0 ? 1 : -1;
+    wrap.style.transform = `translateX(${dir * 120}%) rotate(${dir * 14}deg)`;
+    wrap.style.opacity = '0';
+    // Let the card clear the screen before the next one renders in.
+    setTimeout(() => advanceCard(dir > 0), 190);
+    return;
+  }
+  wrap.style.transform = '';       // spring back
+}
+
+$app.addEventListener('pointerup', () => endDrag(false));
+$app.addEventListener('pointercancel', () => endDrag(true));
+$app.addEventListener('pointerleave', () => endDrag(true));
+
+/* ══════════════════════════════════════════════════════════════════════
    Events — one delegated handler for the whole app
    ══════════════════════════════════════════════════════════════════════ */
 
@@ -1015,6 +1116,9 @@ $app.addEventListener('click', ev => {
   const target = ev.target.closest('[data-act]');
   if (!target) return;
   const act = target.dataset.act;
+
+  // A swipe ends with a click; don't let it also advance the card.
+  if (act === 'flip' && Date.now() - swipedAt < 400) return;
 
   switch (act) {
     case 'home':      go('home'); break;
