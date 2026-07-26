@@ -98,6 +98,7 @@ const blankStore = () => ({
   exercises: {},   // "level-chapter" → { best, last, total, attempts, date }
   days:      [],   // ISO dates on which anything was studied
   started:   todayISO(),
+  sound:     true, // read-aloud and verdict tones; off means silent study
 });
 
 let store = load();
@@ -218,6 +219,7 @@ const heldCount = lv => wordsIn(lv).filter(isHeld).length;
    ══════════════════════════════════════════════════════════════════════ */
 
 function speak(text, rate) {
+  if (!store.sound) return false;
   if (!('speechSynthesis' in window)) return false;
   try {
     speechSynthesis.cancel();
@@ -266,6 +268,7 @@ function clearLit() {
 
 function speakAlong(text) {
   clearLit();
+  if (!store.sound) return;
   if (!('speechSynthesis' in window) || !text) return;
 
   const spans = [...document.querySelectorAll('.sp')];
@@ -303,6 +306,50 @@ function speakAlong(text) {
   } catch (e) {
     console.warn('Hanzi: read-along unavailable.', e);
     clearLit();
+  }
+}
+
+/* ── Verdict tones ──────────────────────────────────────────────────────
+   Synthesised rather than shipped as files: two short notes weigh nothing,
+   need no network, and can't fall out of sync with the cache. Correct
+   rises, wrong falls — the shape carries the meaning even at low volume.
+   Kept quiet and brief so it reads as a nudge, not an alarm.
+   ─────────────────────────────────────────────────────────────────────── */
+
+const TONES = {
+  correct: { notes: [[659, 0], [988, 0.085]], gain: 0.16, hold: 0.20 },  // E5 → B5
+  wrong:   { notes: [[311, 0], [233, 0.095]], gain: 0.13, hold: 0.24 },  // Eb4 → Bb3
+};
+
+let actx = null;
+
+function sfx(kind) {
+  if (!store.sound) return;
+  const spec = TONES[kind];
+  if (!spec) return;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    actx = actx || new Ctx();
+    // Safari suspends the context until a gesture; answering is one.
+    if (actx.state === 'suspended') actx.resume();
+
+    const now = actx.currentTime;
+    spec.notes.forEach(([freq, at]) => {
+      const osc = actx.createOscillator();
+      const amp = actx.createGain();
+      osc.type = 'triangle';                 // softer than a sine's pure tone
+      osc.frequency.value = freq;
+      const t0 = now + at;
+      amp.gain.setValueAtTime(0.0001, t0);
+      amp.gain.exponentialRampToValueAtTime(spec.gain, t0 + 0.012);
+      amp.gain.exponentialRampToValueAtTime(0.0001, t0 + spec.hold);
+      osc.connect(amp).connect(actx.destination);
+      osc.start(t0);
+      osc.stop(t0 + spec.hold + 0.02);
+    });
+  } catch (e) {
+    console.warn('Hanzi: verdict tone unavailable.', e);
   }
 }
 
@@ -981,6 +1028,9 @@ function renderRunner() {
     <div class="q-head">
       ${backHeader('exercises', `Chapter ${les.n}`, `
         <div class="hdr-group">
+          <button class="pill pill-icon ${store.sound ? 'is-on' : 'is-off'}"
+                  data-act="toggle-sound"
+                  aria-label="${store.sound ? 'Sound on' : 'Sound off'}">${store.sound ? '♪' : '♪⃠'}</button>
           <button class="pill ${en ? 'is-on' : 'is-off'}" data-act="toggle-en">English ${en ? 'on' : 'off'}</button>
           <div class="pill">${S.questionIndex + 1} / ${S.qs.length}</div>
         </div>`)}
@@ -1077,6 +1127,8 @@ function matchPicture(oi) {
   if (cur === -1 || S.matches.includes(oi)) return;
 
   S.matches[cur] = oi;
+  // Each pairing is its own right/wrong, so it gets its own tone.
+  sfx(oi === cur ? 'correct' : 'wrong');
 
   if (S.matches.every(m => m != null)) {
     const allRight = S.matches.every((m, i) => m === i);
@@ -1168,7 +1220,9 @@ function renderReading(q, en, done) {
 function answerQuestion(i) {
   if (S.answer !== null) return;          // once answered, further taps are ignored
   S.answer = i;
-  if (i === S.qs[S.questionIndex].answer) S.exRight += 1;
+  const right = i === S.qs[S.questionIndex].answer;
+  if (right) S.exRight += 1;
+  sfx(right ? 'correct' : 'wrong');
   markStudiedToday();
   save();
   render();
@@ -1589,6 +1643,15 @@ $app.addEventListener('click', ev => {
     case 'pick-ex-level':
       S.exLevel = Number(target.dataset.lv);
       S.exChapter = null;          // chapter numbers don't carry across books
+      render();
+      break;
+
+    /* Governs both the verdict tones and the read-aloud — one switch for
+       everything that makes noise, so the app can be worked in silence. */
+    case 'toggle-sound':
+      store.sound = !store.sound;
+      save();
+      if (!store.sound && 'speechSynthesis' in window) speechSynthesis.cancel();
       render();
       break;
 
