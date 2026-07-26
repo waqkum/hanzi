@@ -548,6 +548,72 @@ function checkSentence(raw) {
   return { issues, notes };
 }
 
+/* ── Word by word ───────────────────────────────────────────────────────
+   Not a translation — there's no translator here to run. It's a gloss:
+   the sentence segmented into the words it's built from, each with the
+   meaning the vocabulary list gives it. That's the useful check anyway,
+   since it shows what you actually wrote rather than what you meant.
+   ─────────────────────────────────────────────────────────────────────── */
+
+const GLOSS = new Map();
+VOCAB.forEach(w => { if (!GLOSS.has(w.han)) GLOSS.set(w.han, w.en); });
+
+/* Structural pieces the word lists don't gloss usefully on their own. */
+Object.entries({
+  '了': 'done / changed', '的': '’s', '得': '(before a description)',
+  '着': '(going on)', '过': '(have ever)', '吗': '?', '呢': '?',
+  '吧': '(suggestion)', '不': 'not', '没': 'not (past)', '很': 'very',
+  '在': 'at / -ing', '和': 'and', '也': 'also', '都': 'all', '就': 'then',
+  '还': 'still', '很多': 'a lot',
+}).forEach(([k, v]) => GLOSS.set(k, v));
+
+/* Everyday words a journal entry reaches for that sit just outside the
+   HSK 1–2 lists. Glossing them beats showing a dash — the point is to
+   read back what you wrote, not to police the syllabus. */
+Object.entries({
+  '吃饭': 'to eat a meal', '饭': 'meal, rice', '行': 'to go, OK',
+  '进行': 'to carry out', '起': 'to rise', '车': 'vehicle',
+  '博物馆': 'museum', '公园': 'park', '超市': 'supermarket',
+  '书店': 'bookshop', '地铁': 'the metro', '咖啡馆': 'café',
+  '音乐': 'music', '游戏': 'game', '爬山': 'to hike', '上课': 'to have class',
+  '下课': 'class ends', '自己': 'oneself', '好玩': 'fun', '有点儿': 'a bit',
+  '因为': 'because', '所以': 'so', '但是': 'but', '虽然': 'although',
+  '然后': 'then, after that', '先': 'first', '再': 'again, then',
+}).forEach(([k, v]) => { if (!GLOSS.has(k)) GLOSS.set(k, v); });
+
+const LONGEST_WORD = 4;
+
+function glossSentence(text) {
+  const chars = [...String(text)];
+  const out = [];
+  let i = 0;
+
+  while (i < chars.length) {
+    const c = chars[i];
+
+    // Latin runs stay whole and unglossed — they're names.
+    if (/[A-Za-z]/.test(c)) {
+      let j = i, run = '';
+      while (j < chars.length && /[A-Za-z'’.\-]/.test(chars[j])) { run += chars[j]; j += 1; }
+      out.push({ w: run, en: 'name' });
+      i = j;
+      continue;
+    }
+
+    if (/[，。？！、；：\s]/.test(c)) { i += 1; continue; }
+
+    let hit = null;
+    for (let len = Math.min(LONGEST_WORD, chars.length - i); len >= 1; len -= 1) {
+      const cand = chars.slice(i, i + len).join('');
+      if (GLOSS.has(cand)) { hit = { w: cand, en: GLOSS.get(cand) }; break; }
+    }
+
+    if (hit) { out.push(hit); i += [...hit.w].length; }
+    else     { out.push({ w: c, en: '—' }); i += 1; }
+  }
+  return out;
+}
+
 const todayEntry = () => store.journal.find(e => e.date === todayISO()) || null;
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -833,6 +899,19 @@ function renderToday() {
         <div class="banner-why">I check for the mistakes I know about — that isn’t the same as saying it’s perfect. Lock it in if you’re happy.</div>
         <button class="btn-next" data-act="lock-today">Lock it in</button>
       </div>`) : ''}
+
+    ${c && !c.empty ? `
+      <div class="gloss-card">
+        <div class="label">WORD BY WORD</div>
+        <div class="gloss">
+          ${glossSentence(S.draft.trim()).map(g => `
+            <div class="gloss-unit">
+              <div class="gloss-han han">${h(g.w)}</div>
+              <div class="gloss-en">${h(g.en)}</div>
+            </div>`).join('')}
+        </div>
+        <div class="gloss-note">Literal, word by word — not how it would be said in English.</div>
+      </div>` : ''}
 
     ${c && c.notes && c.notes.length ? `
       <div class="today-notes">${c.notes.map(n => `<div>${h(n)}</div>`).join('')}</div>` : ''}

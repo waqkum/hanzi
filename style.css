@@ -495,6 +495,44 @@ button {
   margin-top: 2px;
 }
 
+/* Word-by-word gloss, shown after a check so you can see what you wrote
+   actually says. Each unit stacks the word over its meaning, the same way
+   the flashcards stack pinyin under a character. */
+.gloss-card {
+  background: var(--white);
+  border-radius: var(--r-bento);
+  padding: 18px 20px;
+  margin-top: 9px;
+  flex: none;
+}
+
+.gloss {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 16px;
+  margin-top: 12px;
+}
+
+.gloss-unit { max-width: 132px; }
+
+.gloss-han {
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.gloss-en {
+  font-size: 12px;
+  color: var(--ink-55);
+  line-height: 1.3;
+  margin-top: 3px;
+}
+
+.gloss-note {
+  font-size: 12px;
+  color: var(--ink-45);
+  margin-top: 14px;
+}
+
 /* Observations that don't block — unknown characters, missing 。 */
 .today-notes {
   font-size: 12px;
