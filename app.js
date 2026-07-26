@@ -958,12 +958,20 @@ function renderRunner() {
       ${S.questionIndex + 1 >= S.qs.length ? 'Finish' : 'Next question'}
     </button>` : '';
 
+  /* A question counts as done the moment it's answered, so the bar moves
+     under your finger rather than waiting for Next. Same component as the
+     drill's. */
+  const pct = ((S.questionIndex + (done ? 1 : 0)) / S.qs.length) * 100;
+
   return `
-    ${backHeader('exercises', `Lesson ${les.n}`, `
-      <div class="hdr-group">
-        <button class="pill ${en ? 'is-on' : 'is-off'}" data-act="toggle-en">English ${en ? 'on' : 'off'}</button>
-        <div class="pill">${S.questionIndex + 1} / ${S.qs.length}</div>
-      </div>`)}
+    <div class="q-head">
+      ${backHeader('exercises', `Lesson ${les.n}`, `
+        <div class="hdr-group">
+          <button class="pill ${en ? 'is-on' : 'is-off'}" data-act="toggle-en">English ${en ? 'on' : 'off'}</button>
+          <div class="pill">${S.questionIndex + 1} / ${S.qs.length}</div>
+        </div>`)}
+      <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>
+    </div>
 
     <div class="q-label-row">
       <div class="q-label">${h(q.label)}</div>
