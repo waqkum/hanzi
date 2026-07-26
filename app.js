@@ -905,6 +905,27 @@ function verdictWhy(q, right) {
   return right ? q.why.right : q.why.wrong;
 }
 
+/* A full-width option row, shared by listening and reading. An option may
+   carry `img` — a workbook photo — in place of, or alongside, its text;
+   the picture-choice questions are answered by looking, so the English
+   caption stays hidden until the English toggle or an answer reveals it. */
+function optRow(o, i, q, en, done) {
+  const thumb = o.img
+    ? `<img class="opt-thumb" src="${h(o.img)}" alt="${h(o.en || '')}">`
+    : '';
+  const text = o.han
+    ? `<div class="opt-row-han han">${h(o.han)}</div>
+       ${o.py ? `<div class="opt-row-py">${h(o.py)}</div>` : ''}`
+    : '';
+  return `
+    <button class="${optClass(i, q)}" data-act="answer" data-i="${i}">
+      <div class="opt-row-body${o.img ? ' has-thumb' : ''}">
+        ${thumb}${text}
+        ${(en || done) && o.en ? `<div class="opt-en">${o.han ? '· ' : ''}${h(o.en)}</div>` : ''}
+      </div>
+    </button>`;
+}
+
 /* One skin function shared by every option, per the handoff. */
 function optClass(i, q) {
   if (S.answer === null) return 'opt';
@@ -1050,14 +1071,7 @@ function renderListening(q, en, done) {
   const bars = [40, 70, 100, 55, 85, 35, 60, 90, 45].map((v, i) =>
     `<div class="wave-bar${i < 4 ? ' is-played' : ''}" style="height:${v}%"></div>`).join('');
 
-  const rows = q.options.map((o, i) => `
-    <button class="${optClass(i, q)}" data-act="answer" data-i="${i}">
-      <div class="opt-row-body">
-        <div class="opt-row-han han">${h(o.han)}</div>
-        <div class="opt-row-py">${h(o.py)}</div>
-        ${(en || done) && o.en ? `<div class="opt-en">· ${h(o.en)}</div>` : ''}
-      </div>
-    </button>`).join('');
+  const rows = q.options.map((o, i) => optRow(o, i, q, en, done)).join('');
 
   return `
     <div class="player">
@@ -1088,11 +1102,13 @@ function renderTrueFalse(q, en, done) {
     </button>`).join('');
 
   /* Listening Part I shows a picture and asks whether the sentence you
-     hear describes it, so those carry a glyph as well as the sentence. */
-  const pic = q.glyph ? `
-    <div class="tf-pic">
-      <span class="pic-glyph" role="img" aria-label="${h(q.glyphAlt || '')}">${q.glyph}</span>
-    </div>` : '';
+     hear describes it. `img` is the workbook's own photo, cropped out of
+     the page scan; `glyph` is the emoji fallback for generated sets. */
+  const pic = q.img
+    ? `<div class="tf-pic"><img src="${h(q.img)}" alt="${h(q.imgAlt || '')}"></div>`
+    : q.glyph
+      ? `<div class="tf-pic"><span class="pic-glyph" role="img" aria-label="${h(q.glyphAlt || '')}">${q.glyph}</span></div>`
+      : '';
 
   return `
     ${pic}
@@ -1115,14 +1131,7 @@ function renderTrueFalse(q, en, done) {
 }
 
 function renderReading(q, en, done) {
-  const rows = q.options.map((o, i) => `
-    <button class="${optClass(i, q)}" data-act="answer" data-i="${i}">
-      <div class="opt-row-body">
-        <div class="opt-row-han han">${h(o.han)}</div>
-        <div class="opt-row-py">${h(o.py)}</div>
-        ${(en || done) && o.en ? `<div class="opt-en">· ${h(o.en)}</div>` : ''}
-      </div>
-    </button>`).join('');
+  const rows = q.options.map((o, i) => optRow(o, i, q, en, done)).join('');
 
   return `
     <div class="q-card">

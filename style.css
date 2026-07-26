@@ -1184,13 +1184,39 @@ button {
 
 /* The picture a Listening Part I sentence is judged against. */
 .tf-pic {
-  aspect-ratio: 2.2;
   border-radius: var(--r-row);
   background: var(--placeholder);
   display: grid;
   place-items: center;
   margin-top: 10px;
+  overflow: hidden;
   flex: none;
+}
+
+/* Emoji fallback keeps the old letterbox; a real photo sets its own. */
+.tf-pic:has(.pic-glyph) { aspect-ratio: 2.2; }
+
+.tf-pic img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Workbook photo inside an option row. Picture-choice questions have no
+   text to sit beside, so the image carries the row. */
+.opt-thumb {
+  width: 148px;
+  height: 92px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex: none;
+  background: var(--placeholder);
+}
+
+.opt-row-body.has-thumb {
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
 }
 
 .pic-glyph {
