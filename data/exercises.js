@@ -89,7 +89,7 @@ const EXERCISES = {
             wrong:'桌子 means table, but the picture is of chairs.' } },
 
     { type:'truefalse', label:'LISTENING · Q5 · P.1',
-      glyph:'🙋‍♀️', glyphAlt:'a woman looking pleased',
+      img:'img/2-1/q5.jpg', imgAlt:'a woman in sportswear',
       han:'王小姐最喜欢运动。', py:'Wáng xiǎojiě zuì xǐhuan yùndòng.',
       en:'Miss Wang likes sport best.',
       claim:'图片和句子一样吗？', claimPy:'Túpiàn hé jùzi yíyàng ma?',

@@ -1196,17 +1196,20 @@ button {
 /* Emoji fallback keeps the old letterbox; a real photo sets its own. */
 .tf-pic:has(.pic-glyph) { aspect-ratio: 2.2; }
 
+/* Capped so the question still fits a phone without scrolling — the
+   photos only need to be identifiable, not large. */
 .tf-pic img {
   display: block;
   width: 100%;
-  height: auto;
+  max-height: min(190px, 24vh);
+  object-fit: cover;
 }
 
 /* Workbook photo inside an option row. Picture-choice questions have no
    text to sit beside, so the image carries the row. */
 .opt-thumb {
-  width: 148px;
-  height: 92px;
+  width: 124px;
+  height: 74px;
   object-fit: cover;
   border-radius: 10px;
   flex: none;
@@ -1216,7 +1219,7 @@ button {
 .opt-row-body.has-thumb {
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px;
 }
 
 .pic-glyph {
@@ -1279,10 +1282,41 @@ button {
 
 /* — Feedback banner — */
 
+/* Sticks to the bottom of the scrollport, so "Next question" is always in
+   reach even when a question runs long. On questions that already fit,
+   margin-top:auto has it sitting at the foot anyway and nothing moves. */
 .q-foot {
   margin-top: auto;
   padding-top: 12px;
   flex: none;
+  position: sticky;
+  bottom: 0;
+  background: var(--bone);
+}
+
+/* The scrollport's bottom padding sits below the sticky footer, so long
+   content shows through in that strip. These cover it: a solid band below
+   and a short fade above, so text slides out of view rather than being
+   chopped off mid-line. */
+.q-foot::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 48px;
+  background: var(--bone);
+}
+
+.q-foot::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 20px;
+  background: linear-gradient(to bottom, rgba(244, 242, 236, 0), var(--bone));
+  pointer-events: none;
 }
 
 .banner {
