@@ -99,6 +99,7 @@ const blankStore = () => ({
   days:      [],   // ISO dates on which anything was studied
   started:   todayISO(),
   sound:     true, // read-aloud and verdict tones; off means silent study
+  journal:   [],   // { date, text, tries } — one sentence a day
 });
 
 let store = load();
@@ -369,6 +370,174 @@ function speakQuestion() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   Sentence check — "What did you do today?"
+
+   IMPORTANT, and the copy on screen says so: this looks for mistakes it
+   knows about. Finding none is not proof a sentence is right. Every rule
+   below is deliberately conservative — a false accusation teaches the
+   wrong thing, so where a pattern is ambiguous the rule stays quiet.
+
+   A real check of arbitrary Chinese needs a language model, which needs a
+   key, which can't live in client-side code on a public URL. Swap
+   checkSentence for a call to a Netlify Function later and nothing else
+   here has to change.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const NUMERALS_CH = '一二三四五六七八九十两百千半几';
+
+const MEASURES = ['个', '本', '块', '件', '岁', '点', '些', '杯', '张', '条', '只',
+                  '位', '口', '天', '次', '年', '月', '号', '分钟', '小时', '米', '瓶', '碗'];
+
+const ADJECTIVES = ['好', '大', '小', '多', '少', '冷', '热', '高', '长', '快', '慢',
+                    '贵', '便宜', '累', '忙', '新', '远', '近', '早', '晚', '漂亮',
+                    '高兴', '快乐', '好吃', '红', '白', '黑', '胖', '瘦', '难', '容易'];
+
+const TIME_WORDS = ['今天', '昨天', '明天', '前天', '后天', '现在', '早上', '上午',
+                    '中午', '下午', '晚上', '去年', '今年', '明年', '每天', '星期天'];
+
+const QUESTION_WORDS = ['什么', '哪儿', '哪里', '谁', '怎么样', '怎么', '为什么',
+                        '多少', '多大', '几'];
+
+/* Enough of a verb list to tell a sentence from a noun phrase. */
+const VERBS = ['是', '有', '去', '来', '吃', '喝', '看', '说', '做', '买', '卖', '学习',
+               '工作', '住', '睡觉', '起床', '跑步', '玩', '打', '踢', '洗', '找', '问',
+               '想', '要', '会', '能', '可以', '走', '回', '到', '开', '坐', '送', '给',
+               '帮助', '介绍', '告诉', '认识', '喜欢', '爱', '觉得', '知道', '希望',
+               '准备', '开始', '完', '休息', '运动', '旅游', '唱歌', '跳舞', '游泳',
+               '看见', '听', '读', '写', '说话', '打电话', '生病', '考试', '穿', '等',
+               '让', '笑', '进', '出', '上班', '下班', '见', '骑', '教', '用'];
+
+const PRONOUNS = ['我', '你', '您', '他', '她', '它', '我们', '你们', '他们', '她们'];
+
+/* Every character the two word lists use — anything else is outside HSK 2. */
+const KNOWN_CHARS = new Set(
+  VOCAB.flatMap(w => [...w.han]).concat([...'，。？！、；：一二三四五六七八九十'])
+);
+
+function checkSentence(raw) {
+  const text = String(raw).trim();
+  const issues = [];   // things that look wrong, with a fix where possible
+  const notes  = [];   // observations that don't block
+
+  if (!text) return { empty: true, issues, notes };
+
+  const bare = text.replace(/[，。？！、；：\s]/g, '');
+
+  /* — Is this even Chinese — */
+  if (/[a-zA-Z]/.test(text)) {
+    issues.push({ msg: 'There are Latin letters in there.',
+                  fix: 'Write the whole sentence in characters — pinyin doesn’t count as practice.' });
+    return { issues, notes };     // no point running the rest on mixed input
+  }
+
+  if ([...bare].length < 3) {
+    issues.push({ msg: 'That’s very short for a sentence.',
+                  fix: 'Try a subject, a verb and an object — 我今天去了商店。' });
+    return { issues, notes };
+  }
+
+  /* — Does it contain a verb at all — an adjective counts, since Chinese
+       predicates them directly: 我很累。needs no verb and never had one. */
+  const hasAdjPredicate = ADJECTIVES.some(a => bare.includes(a));
+  if (!VERBS.some(v => bare.includes(v)) && !hasAdjPredicate) {
+    issues.push({ msg: 'I can’t find a verb.',
+                  fix: 'A sentence needs an action, 是/有, or an adjective — 我今天看了电影。' });
+  }
+
+  /* — Question word AND 吗: only one is needed — */
+  const qWord = QUESTION_WORDS.find(q => bare.includes(q));
+  if (qWord && /吗[？?]?$/.test(text)) {
+    issues.push({ msg: `You’ve got both ${qWord} and 吗.`,
+                  fix: `A question word already asks the question — drop the 吗.` });
+  }
+
+  /* — 二 before a measure word should be 两 — */
+  MEASURES.forEach(m => {
+    const i = bare.indexOf('二' + m);
+    if (i >= 0 && bare[i - 1] !== '十' && bare[i - 1] !== '百') {
+      issues.push({ msg: `二${m} isn’t how you count things.`,
+                    fix: `Use 两${m} — 二 is for numbers and dates, 两 for quantities.` });
+    }
+  });
+
+  /* — Number straight onto a noun, with no measure word — */
+  for (let i = 0; i < bare.length - 1; i++) {
+    if (!NUMERALS_CH.includes(bare[i])) continue;
+    const next = bare[i + 1];
+    if (NUMERALS_CH.includes(next)) continue;                 // 十五, 二十
+    if (MEASURES.includes(next)) continue;                    // already fine
+    if (MEASURES.some(m => m.length > 1 && bare.startsWith(m, i + 1))) continue;
+    // Only complain when what follows is a noun we recognise.
+    const noun = VOCAB.find(w => bare.startsWith(w.han, i + 1) && w.han.length >= 1
+                                 && !VERBS.includes(w.han) && !ADJECTIVES.includes(w.han)
+                                 && !MEASURES.includes(w.han));
+    if (noun && !'点岁号月天'.includes(next)) {
+      issues.push({ msg: `${bare[i]}${noun.han} is missing a measure word.`,
+                    fix: `Chinese counts with one — try ${bare[i]}个${noun.han}, or the measure word that fits.` });
+      break;                                                   // one is enough
+    }
+  }
+
+  /* — 是 with an adjective — */
+  ADJECTIVES.forEach(a => {
+    if (bare.includes('是' + a) && !bare.includes('是' + a + '的')) {
+      issues.push({ msg: `是${a} doesn’t work.`,
+                    fix: `Adjectives don’t take 是 — say 很${a} instead.` });
+    }
+  });
+
+  /* — Bare adjective predicate: 我高 wants 我很高 — */
+  PRONOUNS.forEach(p => {
+    ADJECTIVES.forEach(a => {
+      if (!bare.includes(p + a) || bare.includes(p + '很' + a)) return;
+      const at = bare.indexOf(p + a);
+      // 不, 太, 非常, 最 sit between and so never match here. These do:
+      const before = bare[at - 1];
+      const after  = bare[at + p.length + a.length];
+      if (before === '比') return;      // 他比我大三岁 — comparison licenses it
+      if (after === '的' || after === '了') return;
+      issues.push({ msg: `${p}${a} sounds unfinished.`,
+                    fix: `An adjective on its own needs a degree word — ${p}很${a}。` });
+    });
+  });
+
+  /* — 没 with 了 — */
+  if (/没[^。，]{0,4}了/.test(bare)) {
+    issues.push({ msg: '没 and 了 don’t go together.',
+                  fix: '没 already puts it in the past — drop the 了.' });
+  }
+
+  /* — 了 straight after the subject — */
+  PRONOUNS.forEach(p => {
+    if (bare.startsWith(p + '了')) {
+      issues.push({ msg: `了 is in the wrong place.`,
+                    fix: `了 follows the verb, not the subject — ${p}去了…` });
+    }
+  });
+
+  /* — Time word stranded at the end — */
+  const tail = TIME_WORDS.find(t => bare.endsWith(t));
+  if (tail) {
+    issues.push({ msg: `${tail} is at the end.`,
+                  fix: `Time goes before the verb in Chinese — ${tail}我… or 我${tail}…` });
+  }
+
+  /* — Characters outside HSK 1–2. A note, not a fault. — */
+  const outside = [...new Set([...bare])].filter(c => !KNOWN_CHARS.has(c));
+  if (outside.length) {
+    notes.push(`Outside HSK 1–2: ${outside.join(' ')} — fine to use, just not checked.`);
+  }
+
+  if (!/[。！？]$/.test(text)) {
+    notes.push('No full stop — 。ends a Chinese sentence.');
+  }
+
+  return { issues, notes };
+}
+
+const todayEntry = () => store.journal.find(e => e.date === todayISO()) || null;
+
+/* ══════════════════════════════════════════════════════════════════════
    Session state (not persisted)
    ══════════════════════════════════════════════════════════════════════ */
 
@@ -394,6 +563,9 @@ let S = {
   exChapter: null,          // chapter selected in that list, null until you pick
   exBeat: false,            // did the run just beat the previous best
   exBest: null,
+
+  draft: '',                // today's sentence as typed, kept out of the DOM
+  checked: null,            // last checkSentence result, null until you check
   startedAt: 0,
   lastMs: 0,
 
@@ -545,6 +717,7 @@ function renderHome() {
   const held  = heldCount(lv);
   const fresh = unseenIn(lv).length;
   const days  = streakDays();
+  const done  = Boolean(todayEntry());
 
   return `
     <div class="hdr">
@@ -579,16 +752,111 @@ function renderHome() {
       </div>
     </button>
 
-    <button class="home-card home-card-c" data-act="progress">
-      <div class="home-card-top">
-        <div class="icon-sq icon-sq-on-ink han">进</div>
-        <div class="home-card-badge">${held} / ${total}</div>
-      </div>
-      <div>
-        <div class="home-card-title">Progress</div>
-        <div class="home-card-sub">${days} day streak · ${fresh} still new</div>
-      </div>
-    </button>`;
+    <div class="home-row">
+      <button class="home-card home-card-c home-card-half" data-act="progress">
+        <div class="home-card-top">
+          <div class="icon-sq icon-sq-on-ink han">进</div>
+        </div>
+        <div>
+          <div class="home-card-title">Progress</div>
+          <div class="home-card-sub">${held} / ${total} held</div>
+        </div>
+      </button>
+
+      <button class="home-card home-card-half ${done ? 'home-card-done' : 'home-card-todo'}"
+              data-act="today">
+        <div class="home-card-top">
+          <div class="icon-sq han">日</div>
+        </div>
+        <div>
+          <div class="home-card-title">Today</div>
+          <div class="home-card-sub">${done ? 'Written ✓' : 'Not written yet'}</div>
+        </div>
+      </button>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   1b · What did you do today?
+   ══════════════════════════════════════════════════════════════════════ */
+
+function renderToday() {
+  const entry = todayEntry();
+  const past  = store.journal.filter(e => e.date !== todayISO())
+                             .sort((a, b) => b.date.localeCompare(a.date));
+  const c = S.checked;
+
+  const dateLabel = iso => parseISO(iso)
+    .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+  /* Locked in for today — the input is gone and the sentence stands. */
+  const todayBlock = entry ? `
+    <div class="today-locked">
+      <div class="label label-on-tint">TODAY · LOCKED IN</div>
+      <div class="today-sentence han">${h(entry.text)}</div>
+      <button class="audio-btn today-say" data-act="say" data-text="${h(entry.text)}">♪</button>
+    </div>` : `
+    <div class="today-input-card">
+      <div class="label">IN CHINESE, ONE SENTENCE</div>
+      <textarea class="today-input han" data-act="draft" rows="2"
+                placeholder="我今天…"
+                enterkeyhint="done">${h(S.draft)}</textarea>
+      <button class="btn-start today-check" data-act="check-today">
+        Check<span class="dot dot-lime"></span>
+      </button>
+    </div>
+
+    ${c && !c.empty ? (c.issues.length ? `
+      <div class="banner banner-wrong">
+        <div class="banner-verdict">${c.issues.length === 1 ? 'One thing to fix.' : `${c.issues.length} things to fix.`}</div>
+        ${c.issues.map(i => `
+          <div class="fix">
+            <div class="fix-msg">${h(i.msg)}</div>
+            <div class="fix-hint">${h(i.fix)}</div>
+          </div>`).join('')}
+      </div>` : `
+      <div class="banner banner-right">
+        <div class="banner-verdict">Nothing wrong that I can see.</div>
+        <div class="banner-why">I check for the mistakes I know about — that isn’t the same as saying it’s perfect. Lock it in if you’re happy.</div>
+        <button class="btn-next" data-act="lock-today">Lock it in</button>
+      </div>`) : ''}
+
+    ${c && c.notes && c.notes.length ? `
+      <div class="today-notes">${c.notes.map(n => `<div>${h(n)}</div>`).join('')}</div>` : ''}
+  `;
+
+  const list = past.length ? past.map(e => `
+    <div class="today-row">
+      <div class="today-row-date">${h(dateLabel(e.date))}</div>
+      <div class="today-row-text han">${h(e.text)}</div>
+    </div>`).join('')
+    : '<div class="empty-note">Nothing yet. One sentence a day adds up.</div>';
+
+  return `
+    ${backHeader('home', 'Home', `<div class="hdr-meta">${store.journal.length} ${store.journal.length === 1 ? 'day' : 'days'}</div>`)}
+    <div class="title"><div class="title-text">What did you<br>do today?</div></div>
+    ${todayBlock}
+    <div class="label" style="padding:14px 6px 0">EARLIER</div>
+    <div class="today-list">${list}</div>`;
+}
+
+function checkToday() {
+  const text = S.draft.trim();
+  if (!text) return;
+  S.checked = checkSentence(text);
+  sfx(S.checked.issues.length ? 'wrong' : 'correct');
+  render();
+}
+
+function lockToday() {
+  const text = S.draft.trim();
+  if (!text) return;
+  store.journal.push({ date: todayISO(), text, tries: (S.tries || 0) + 1 });
+  markStudiedToday();
+  save();
+  S.draft = '';
+  S.checked = null;
+  render();
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1430,11 +1698,11 @@ function renderProgress() {
 const VIEWS = {
   home: renderHome, sets: renderSets, drill: renderDrill, summary: renderSummary,
   exercises: renderExercises, runner: renderRunner, exdone: renderDone,
-  progress: renderProgress,
+  progress: renderProgress, today: renderToday,
 };
 
 /* Screens whose content can exceed the 800pt canvas. */
-const SCROLLS = new Set(['runner', 'exdone', 'summary']);
+const SCROLLS = new Set(['runner', 'exdone', 'summary', 'today']);
 
 function go(screen) {
   S.screen = screen;
@@ -1555,6 +1823,24 @@ function endDrag(cancelled) {
   }
 }
 
+/* The journal textarea lives outside the render cycle on purpose: render()
+   replaces innerHTML, so re-rendering per keystroke would drop the caret.
+   The draft is mirrored into S instead, and only a check re-renders. */
+$app.addEventListener('input', ev => {
+  const box = ev.target.closest('[data-act="draft"]');
+  if (box) S.draft = box.value;
+});
+
+$app.addEventListener('keydown', ev => {
+  if (!ev.target.closest('[data-act="draft"]')) return;
+  // Enter checks; Shift+Enter still breaks the line.
+  if (ev.key === 'Enter' && !ev.shiftKey) {
+    ev.preventDefault();
+    ev.target.blur();               // drop the keyboard so the result is visible
+    checkToday();
+  }
+});
+
 $app.addEventListener('pointerup', () => endDrag(false));
 $app.addEventListener('pointercancel', () => endDrag(true));
 $app.addEventListener('pointerleave', () => endDrag(true));
@@ -1576,6 +1862,14 @@ $app.addEventListener('click', ev => {
     case 'sets':      go('sets'); break;
     case 'progress':  go('progress'); break;
     case 'exercises': go('exercises'); break;
+
+    case 'today':
+      S.checked = null;
+      go('today');
+      break;
+
+    case 'check-today': checkToday(); break;
+    case 'lock-today':  lockToday();  break;
 
     /* Tapping an unselected level just selects it, so you can pick a
        chapter within it. Tapping the selected one drills the whole level. */

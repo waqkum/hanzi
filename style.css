@@ -360,6 +360,27 @@ button {
 
 .home-card:active { transform: scale(.985); }
 
+/* Progress and Today share the bottom slot, side by side. */
+.home-row {
+  display: flex;
+  gap: 9px;
+  flex: 1;
+  min-height: 92px;
+}
+
+.home-card-half {
+  flex: 1;
+  min-width: 0;
+  padding: 18px;
+}
+
+.home-card-half .home-card-title { font-size: 20px; }
+.home-card-half .home-card-sub   { font-size: 12px; }
+
+/* Amber until the day's sentence is written, lime once it is. */
+.home-card-todo { background: var(--amber); }
+.home-card-done { background: var(--lime); }
+
 .home-card-a { background: var(--lime); }
 .home-card-b { background: var(--periwinkle); }
 .home-card-c {
@@ -405,6 +426,114 @@ button {
   font-size: 12px;
   font-weight: 500;
   color: var(--bone-60);
+}
+
+/* ═══ 1b. What did you do today? ══════════════════════════════════════ */
+
+.today-input-card {
+  background: var(--white);
+  border-radius: var(--r-hero);
+  padding: 20px;
+  margin-top: 10px;
+  flex: none;
+}
+
+.today-input {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--han);
+  font-size: 22px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+
+.today-input::placeholder { color: var(--ink-20); }
+
+.today-check { margin-top: 6px; }
+
+/* Today's sentence once it's in — lime, and no longer editable. */
+.today-locked {
+  position: relative;
+  background: var(--lime);
+  border-radius: var(--r-hero);
+  padding: 20px 22px;
+  margin-top: 10px;
+  flex: none;
+}
+
+.today-sentence {
+  font-size: 22px;
+  line-height: 1.5;
+  margin-top: 8px;
+  padding-right: 38px;
+}
+
+.today-say {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+/* One correction inside the feedback banner. */
+.fix { margin-top: 10px; }
+
+.fix-msg {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+
+.fix-hint {
+  font-size: 13px;
+  color: var(--ink-62);
+  margin-top: 2px;
+}
+
+/* Observations that don't block — unknown characters, missing 。 */
+.today-notes {
+  font-size: 12px;
+  color: var(--ink-50);
+  padding: 10px 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 10px;
+  min-height: 0;
+}
+
+.today-row {
+  background: var(--white);
+  border-radius: var(--r-row);
+  padding: 12px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.today-row-date {
+  font-size: 11px;
+  color: var(--ink-45);
+  width: 46px;
+  flex: none;
+}
+
+.today-row-text {
+  font-size: 15px;
+  line-height: 1.5;
+  flex: 1;
+  min-width: 0;
 }
 
 /* ═══ 2. Set picker ═══════════════════════════════════════════════════ */
