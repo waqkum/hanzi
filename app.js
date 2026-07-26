@@ -419,20 +419,33 @@ function checkSentence(raw) {
   const issues = [];   // things that look wrong, with a fix where possible
   const notes  = [];   // observations that don't block
 
-  if (!text) return { empty: true, issues, notes };
+  /* — Latin runs — a place or a person with an English name is normal in
+       a sentence about your day, so those are lifted out and left alone
+       rather than failed. Only text with no Chinese in it at all is
+       treated as pinyin dodging the characters. — */
+  const latin   = text.match(/[A-Za-z]+(?:[\s'’.\-][A-Za-z]+)*/g) || [];
+  const chinese = [...text].filter(c => /[一-鿿]/.test(c)).length;
 
-  const bare = text.replace(/[，。？！、；：\s]/g, '');
+  if (latin.length && chinese === 0) {
+    issues.push({ msg: 'That’s written in letters, not characters.',
+                  fix: 'Pinyin doesn’t count as practice — write it in characters.' });
+    return { issues, notes };
+  }
 
-  /* — Is this even Chinese — */
-  if (/[a-zA-Z]/.test(text)) {
-    issues.push({ msg: 'There are Latin letters in there.',
-                  fix: 'Write the whole sentence in characters — pinyin doesn’t count as practice.' });
-    return { issues, notes };     // no point running the rest on mixed input
+  // Everything after this point looks only at the Chinese.
+  const bare = text
+    .replace(/[A-Za-z]+(?:[\s'’.\-][A-Za-z]+)*/g, '')
+    .replace(/[，。？！、；：\s]/g, '');
+
+  if (latin.length) {
+    notes.push(`Left alone: ${latin.map(s => s.trim()).filter(Boolean).join(', ')} — names in English aren’t checked.`);
   }
 
   if ([...bare].length < 3) {
-    issues.push({ msg: 'That’s very short for a sentence.',
-                  fix: 'Try a subject, a verb and an object — 我今天去了商店。' });
+    issues.push({
+      msg: latin.length ? 'There’s barely any Chinese in there.' : 'That’s very short for a sentence.',
+      fix: 'Try a subject, a verb and an object — 我今天去了商店。',
+    });
     return { issues, notes };
   }
 
