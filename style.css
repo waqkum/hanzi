@@ -1413,6 +1413,20 @@ button {
   color: var(--ink-50);
 }
 
+/* The mark to beat, under the score on the chapter-done screen. */
+.score-best {
+  font-size: 13px;
+  color: var(--ink-60);
+  margin-top: 8px;
+}
+
+/* Best-score line inside a selected chapter card. */
+.week-best {
+  font-size: 12px;
+  color: var(--ink-55);
+  margin-top: 8px;
+}
+
 .pattern-line-han { font-size: 16px; }
 
 .pattern-line-gloss {
@@ -1511,11 +1525,14 @@ button {
   gap: 12px;
 }
 
+/* Wide enough for "Chapter 15" on one line — 60px fitted "Lesson 1" but
+   wrapped once the rename made the labels longer. */
 .chapter-name {
   font-size: 13px;
-  width: 60px;
+  width: 76px;
   font-weight: 500;
   flex: none;
+  white-space: nowrap;
 }
 
 .chapter-track {

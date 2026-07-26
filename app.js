@@ -95,7 +95,7 @@ const STORE_KEY = 'hanzi.v1';
 const blankStore = () => ({
   words:     {},   // id → { seen, miss, streak, last }
   sessions:  [],   // { date, ms, got, missed }
-  exercises: {},   // "level-lesson" → { score, total, date }
+  exercises: {},   // "level-chapter" → { best, last, total, attempts, date }
   days:      [],   // ISO dates on which anything was studied
   started:   todayISO(),
 });
@@ -342,6 +342,11 @@ let S = {
 
   matches: [],        // picture questions: tile index -> chosen option index
   chipOrder: [],      // picture questions: shuffled display order of options
+
+  exLevel: CURRENT.level,   // which book the exercises list is showing
+  exChapter: null,          // chapter selected in that list, null until you pick
+  exBeat: false,            // did the run just beat the previous best
+  exBest: null,
   startedAt: 0,
   lastMs: 0,
 
@@ -523,7 +528,7 @@ function renderHome() {
       </div>
       <div>
         <div class="home-card-title">Exercises</div>
-        <div class="home-card-sub">Lesson ${les.n} workbook, 4 questions</div>
+        <div class="home-card-sub">Chapter ${les.n} workbook exercises</div>
       </div>
     </button>
 
@@ -578,7 +583,7 @@ function renderSets() {
           <div class="row-numeral-py">${h(num.py)}</div>
         </div>
         <div class="row-body">
-          <div class="row-name">Lesson ${les.n}</div>
+          <div class="row-name">Chapter ${les.n}</div>
           <div class="row-han han">${h(les.han)}</div>
           <div class="row-py">${h(les.py)}</div>
         </div>
@@ -789,7 +794,7 @@ function renderSummary() {
     <div class="btn-row">
       <button class="btn btn-ghost" data-act="home">Home</button>
       ${nextLesson()
-        ? '<button class="btn btn-ink" data-act="drill-next">Next lesson</button>'
+        ? '<button class="btn btn-ink" data-act="drill-next">Next chapter</button>'
         : '<button class="btn btn-ink" data-act="exercises">Do the homework</button>'}
     </div>`;
 }
@@ -807,60 +812,69 @@ function nextLesson() {
    ══════════════════════════════════════════════════════════════════════ */
 
 function renderExercises() {
-  const lv   = CURRENT.level;
-  const cur  = LESSONS[lv][CURRENT.lesson - 1];
-  const qs   = exerciseSet(lv, cur.n);
-  const kind = hasAuthoredSet(lv, cur.n)
-    ? 'Blank-filling, pictures, listening, a short reading.'
-    : 'Generated from this lesson’s words until the workbook set is in.';
+  const lv = S.exLevel;
 
-  /* Every lesson in book order, 1 at the top — the workbook's own
-     sequence. The current one is the hero card above, so it's skipped
-     here rather than listed twice. Lessons past the current one are
-     playable but marked as not reached yet. */
-  const past = LESSONS[lv].filter(les => les.n !== cur.n).map(les => {
-    const rec     = store.exercises[`${lv}-${les.n}`];
-    const ahead   = les.n > cur.n;
-    const cls     = 'past-row' + (ahead && !rec ? ' past-row-next' : '');
+  /* Same two-step as the flashcard picker: first tap picks the level,
+     and the chapter list below swaps to it. */
+  const levelCard = n => `
+    <button class="level-card${n === lv ? ' level-card-active' : ''}"
+            data-act="pick-ex-level" data-lv="${n}">
+      <div class="label${n === lv ? ' label-on-tint' : ''}">LEVEL</div>
+      <div class="level-name">${LEVEL_LABEL[n]}</div>
+      <div class="level-sub">${LESSONS[n].length} chapters</div>
+    </button>`;
 
-    let right;
-    if (rec) {
-      const strong = rec.score / rec.total >= 0.75;
-      right = `
-        <div class="past-score">${rec.score}/${rec.total}</div>
-        <div class="status-dot ${strong ? 'status-strong' : 'status-shaky'}"></div>`;
-    } else {
-      right = `<div class="past-score">${ahead ? 'not yet' : 'not done'}</div>`;
+  /* Nothing is highlighted until you choose it. One tap selects a chapter
+     and shows what's in it; a second tap starts it. */
+  const rows = LESSONS[lv].map(les => {
+    const rec  = store.exercises[`${lv}-${les.n}`];
+    const on   = les.n === S.exChapter;
+    const best = rec ? (rec.best != null ? rec.best : rec.score) : null;
+
+    const right = best != null
+      ? `<div class="past-score">${best}/${rec.total}</div>
+         <div class="status-dot ${best / rec.total >= 0.75 ? 'status-strong' : 'status-shaky'}"></div>`
+      : '<div class="past-score">not done</div>';
+
+    if (!on) {
+      return `
+        <button class="past-row" data-act="pick-chapter" data-les="${les.n}">
+          <div class="row-body">
+            <div class="row-name">Chapter ${les.n} · ${h(les.pages)}</div>
+            <div class="row-han han">${h(les.han)}</div>
+            <div class="row-py">${h(les.py)}</div>
+          </div>
+          ${right}
+        </button>`;
     }
 
+    const qs   = exerciseSet(lv, les.n);
+    const kind = hasAuthoredSet(lv, les.n)
+      ? 'Straight from the workbook, in book order.'
+      : 'Generated from this chapter’s words until the workbook set is in.';
+
     return `
-      <button class="${cls}" data-act="run" data-les="${les.n}">
-        <div class="row-body">
-          <div class="row-name">Lesson ${les.n} · ${h(les.pages)}</div>
-          <div class="row-py">${h(les.py)}</div>
+      <button class="week-card" data-act="pick-chapter" data-les="${les.n}">
+        <div class="week-card-top">
+          <div class="label label-on-tint">CHAPTER ${les.n} · ${h(les.pages.toUpperCase())}</div>
+          <div class="pill-static">${qs.length} Q</div>
         </div>
-        ${right}
+        <div class="week-han han">${h(les.han)}</div>
+        <div class="week-py">${h(les.py)}</div>
+        <div class="week-desc">${h(kind)}</div>
+        ${best != null
+          ? `<div class="week-best">Best so far ${best} / ${rec.total} · ${rec.attempts || 1} ${(rec.attempts || 1) === 1 ? 'try' : 'tries'}</div>`
+          : ''}
+        <div class="btn-start">Start<span class="dot dot-lime"></span></div>
       </button>`;
   }).join('');
 
-  const nextRow = '';
-
   return `
     ${backHeader('home', 'Home', `<div class="hdr-meta">Workbook ${lv}</div>`)}
-    <div class="title"><div class="title-text">This week’s<br>homework.</div></div>
-
-    <button class="week-card" data-act="run" data-les="${cur.n}">
-      <div class="week-card-top">
-        <div class="label label-on-tint">LESSON ${cur.n} · ${h(cur.pages.toUpperCase())}</div>
-        <div class="pill-static">${qs.length} Q</div>
-      </div>
-      <div class="week-han han">${h(cur.han)}</div>
-      <div class="week-py">${h(cur.py)}</div>
-      <div class="week-desc">${h(kind)}</div>
-      <div class="btn-start">Start<span class="dot dot-lime"></span></div>
-    </button>
-
-    <div class="past-rows">${past}${nextRow}</div>`;
+    <div class="title"><div class="title-text">Which chapter?</div></div>
+    <div class="level-row">${levelCard(1)}${levelCard(2)}</div>
+    <div class="label" style="padding:8px 6px 0">BY CHAPTER</div>
+    <div class="past-rows">${rows}</div>`;
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -868,11 +882,11 @@ function renderExercises() {
    ══════════════════════════════════════════════════════════════════════ */
 
 function startRunner(lesson) {
-  const qs = exerciseSet(CURRENT.level, lesson);
+  const qs = exerciseSet(S.exLevel, lesson);
   if (!qs.length) return;
   Object.assign(S, {
     lesson, qs, questionIndex: 0, answer: null,
-    exRight: 0, exStartedAt: Date.now(),
+    exRight: 0, exStartedAt: Date.now(), exBeat: false, exBest: null,
   });
   prepQuestion();
   go('runner');
@@ -965,7 +979,7 @@ function renderRunner() {
 
   return `
     <div class="q-head">
-      ${backHeader('exercises', `Lesson ${les.n}`, `
+      ${backHeader('exercises', `Chapter ${les.n}`, `
         <div class="hdr-group">
           <button class="pill ${en ? 'is-on' : 'is-off'}" data-act="toggle-en">English ${en ? 'on' : 'off'}</button>
           <div class="pill">${S.questionIndex + 1} / ${S.qs.length}</div>
@@ -1163,9 +1177,20 @@ function answerQuestion(i) {
 function nextQuestion() {
   if (S.questionIndex + 1 >= S.qs.length) {
     S.exMs = Date.now() - S.exStartedAt;
-    store.exercises[`${CURRENT.level}-${S.lesson}`] = {
-      score: S.exRight, total: S.qs.length, date: todayISO(),
+
+    /* Keep the best run as well as the latest, so a chapter is something
+       you can go back and beat. `score` on the old shape was whatever you
+       last got, so it seeds both. */
+    const key  = `${S.exLevel}-${S.lesson}`;
+    const prev = store.exercises[key] || {};
+    const best = Math.max(S.exRight, prev.best != null ? prev.best : (prev.score || 0));
+    store.exercises[key] = {
+      best, last: S.exRight, total: S.qs.length,
+      attempts: (prev.attempts || 0) + 1, date: todayISO(),
     };
+    S.exBeat = S.exRight > (prev.best != null ? prev.best : (prev.score || -1))
+               && (prev.attempts || 0) > 0;
+    S.exBest = best;
     save();
     clearLit();
     go('exdone');
@@ -1183,7 +1208,7 @@ function nextQuestion() {
    ══════════════════════════════════════════════════════════════════════ */
 
 function renderDone() {
-  const les = LESSONS[CURRENT.level][S.lesson - 1];
+  const les = LESSONS[S.exLevel][S.lesson - 1];
   const all = S.exRight === S.qs.length;
 
   const patterns = les.patterns.map(p => `
@@ -1192,22 +1217,34 @@ function renderDone() {
       <div class="pattern-line-gloss">${h(p.gloss)}</div>
     </div>`).join('');
 
+  const heading = all       ? 'Full marks.<br>Nothing to beat.'
+                : S.exBeat  ? 'New best.<br>Well beaten.'
+                            : 'Chapter done.<br>Worth a re-run.';
+
+  /* Only worth showing once there's a mark that isn't just this run. */
+  const beatLine = S.exBest != null && S.exBest > S.exRight
+    ? `<div class="score-best">Your best is ${S.exBest} / ${S.qs.length}</div>`
+    : S.exBeat
+      ? '<div class="score-best">Beat your previous best</div>'
+      : '';
+
   return `
     <div class="hdr">
-      <div class="hdr-meta">Lesson ${les.n} · ${h(les.pages)}</div>
+      <div class="hdr-meta">Chapter ${les.n} · ${h(les.pages)}</div>
       <div class="hdr-meta">${fmtDuration(S.exMs)}</div>
     </div>
 
     <div class="title-lg">
-      <div class="title-lg-text">${all ? 'Homework’s in.<br>You’re current.' : 'Homework’s in.<br>Worth a re-run.'}</div>
+      <div class="title-lg-text">${heading}</div>
     </div>
 
     <div class="score-card">
-      <div class="label label-on-tint">THIS PAGE</div>
+      <div class="label label-on-tint">THIS CHAPTER</div>
       <div class="score-line">
         <div class="score-num">${S.exRight}</div>
         <div class="score-of">/ ${S.qs.length} right</div>
       </div>
+      ${beatLine}
     </div>
 
     <div class="list-card">
@@ -1242,13 +1279,38 @@ function renderProgress() {
     const partial = pct > 0 && pct < 100;
     return `
       <div class="chapter-line">
-        <div class="chapter-name">Lesson ${les.n}</div>
+        <div class="chapter-name">Chapter ${les.n}</div>
         <div class="chapter-track">
           <div class="chapter-fill${partial ? ' is-partial' : ''}" style="width:${pct}%"></div>
         </div>
         <div class="chapter-count">${good}/${set.length}</div>
       </div>`;
   }).join('');
+
+  /* Exercise scores, kept apart from the word bars above — those move only
+     when you drill flashcards, which is why doing homework looked like it
+     wasn't registering. Best run per chapter, so there's a mark to beat. */
+  const done = LESSONS[lv]
+    .map(les => ({ les, rec: store.exercises[`${lv}-${les.n}`] }))
+    .filter(x => x.rec);
+
+  const exRows = done.length
+    ? done.map(({ les, rec }) => {
+        const best = rec.best != null ? rec.best : rec.score;
+        const pct  = (best / rec.total) * 100;
+        return `
+          <div class="chapter-line">
+            <div class="chapter-name">Chapter ${les.n}</div>
+            <div class="chapter-track">
+              <div class="chapter-fill${pct < 75 ? ' is-partial' : ''}" style="width:${pct}%"></div>
+            </div>
+            <div class="chapter-count">${best}/${rec.total}</div>
+          </div>`;
+      }).join('')
+    : '<div class="empty-note">No chapters done yet — your best score for each will show up here.</div>';
+
+  const exTotal = done.reduce((t, x) => t + (x.rec.best != null ? x.rec.best : x.rec.score), 0);
+  const exOutOf = done.reduce((t, x) => t + x.rec.total, 0);
 
   const fresh = unseenIn(lv);
   const freshCard = fresh.length ? `
@@ -1294,8 +1356,13 @@ function renderProgress() {
       </div>
 
       <div class="bento-chapters bento-wide">
-        <div class="label">BY CHAPTER</div>
+        <div class="label">WORDS HELD BY CHAPTER</div>
         ${chapters}
+      </div>
+
+      <div class="bento-chapters bento-wide">
+        <div class="label">EXERCISE SCORES${exOutOf ? ` · BEST ${exTotal}/${exOutOf}` : ''}</div>
+        ${exRows}
       </div>
 
       ${freshCard}
@@ -1471,7 +1538,7 @@ $app.addEventListener('click', ev => {
 
     case 'drill-lesson': {
       const n = Number(target.dataset.les);
-      startDrill(wordsIn(S.level, n), `Lesson ${n}`, n);
+      startDrill(wordsIn(S.level, n), `Chapter ${n}`, n);
       break;
     }
 
@@ -1483,7 +1550,7 @@ $app.addEventListener('click', ev => {
 
     case 'drill-next': {
       const les = nextLesson();
-      if (les) startDrill(wordsIn(S.level, les.n), `Lesson ${les.n}`, les.n);
+      if (les) startDrill(wordsIn(S.level, les.n), `Chapter ${les.n}`, les.n);
       break;
     }
 
@@ -1509,6 +1576,20 @@ $app.addEventListener('click', ev => {
 
     case 'run':
       startRunner(Number(target.dataset.les));
+      break;
+
+    /* Tapping an unselected chapter opens it; tapping the open one runs it. */
+    case 'pick-chapter': {
+      const n = Number(target.dataset.les);
+      if (n === S.exChapter) startRunner(n);
+      else { S.exChapter = n; render(); }
+      break;
+    }
+
+    case 'pick-ex-level':
+      S.exLevel = Number(target.dataset.lv);
+      S.exChapter = null;          // chapter numbers don't carry across books
+      render();
       break;
 
     case 'toggle-en':
