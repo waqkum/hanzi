@@ -555,31 +555,38 @@ function checkSentence(raw) {
    since it shows what you actually wrote rather than what you meant.
    ─────────────────────────────────────────────────────────────────────── */
 
-const GLOSS = new Map();
-VOCAB.forEach(w => { if (!GLOSS.has(w.han)) GLOSS.set(w.han, w.en); });
+const GLOSS = new Map();   // han → { py, en }
+VOCAB.forEach(w => { if (!GLOSS.has(w.han)) GLOSS.set(w.han, { py: w.py, en: w.en }); });
 
 /* Structural pieces the word lists don't gloss usefully on their own. */
 Object.entries({
-  '了': 'done / changed', '的': '’s', '得': '(before a description)',
-  '着': '(going on)', '过': '(have ever)', '吗': '?', '呢': '?',
-  '吧': '(suggestion)', '不': 'not', '没': 'not (past)', '很': 'very',
-  '在': 'at / -ing', '和': 'and', '也': 'also', '都': 'all', '就': 'then',
-  '还': 'still', '很多': 'a lot',
-}).forEach(([k, v]) => GLOSS.set(k, v));
+  '了': ['le', 'done / changed'], '的': ['de', '’s'],
+  '得': ['de', '(before a description)'], '着': ['zhe', '(going on)'],
+  '过': ['guo', '(have ever)'], '吗': ['ma', '?'], '呢': ['ne', '?'],
+  '吧': ['ba', '(suggestion)'], '不': ['bù', 'not'], '没': ['méi', 'not (past)'],
+  '很': ['hěn', 'very'], '在': ['zài', 'at / -ing'], '和': ['hé', 'and'],
+  '也': ['yě', 'also'], '都': ['dōu', 'all'], '就': ['jiù', 'then'],
+  '还': ['hái', 'still'],
+}).forEach(([k, [py, en]]) => GLOSS.set(k, { py, en }));
 
 /* Everyday words a journal entry reaches for that sit just outside the
    HSK 1–2 lists. Glossing them beats showing a dash — the point is to
    read back what you wrote, not to police the syllabus. */
 Object.entries({
-  '吃饭': 'to eat a meal', '饭': 'meal, rice', '行': 'to go, OK',
-  '进行': 'to carry out', '起': 'to rise', '车': 'vehicle',
-  '博物馆': 'museum', '公园': 'park', '超市': 'supermarket',
-  '书店': 'bookshop', '地铁': 'the metro', '咖啡馆': 'café',
-  '音乐': 'music', '游戏': 'game', '爬山': 'to hike', '上课': 'to have class',
-  '下课': 'class ends', '自己': 'oneself', '好玩': 'fun', '有点儿': 'a bit',
-  '因为': 'because', '所以': 'so', '但是': 'but', '虽然': 'although',
-  '然后': 'then, after that', '先': 'first', '再': 'again, then',
-}).forEach(([k, v]) => { if (!GLOSS.has(k)) GLOSS.set(k, v); });
+  '吃饭': ['chīfàn', 'to eat a meal'], '饭': ['fàn', 'meal, rice'],
+  '行': ['xíng', 'to go, OK'], '进行': ['jìnxíng', 'to carry out'],
+  '起': ['qǐ', 'to rise'], '车': ['chē', 'vehicle'],
+  '博物馆': ['bówùguǎn', 'museum'], '公园': ['gōngyuán', 'park'],
+  '超市': ['chāoshì', 'supermarket'], '书店': ['shūdiàn', 'bookshop'],
+  '地铁': ['dìtiě', 'the metro'], '咖啡馆': ['kāfēiguǎn', 'café'],
+  '音乐': ['yīnyuè', 'music'], '游戏': ['yóuxì', 'game'],
+  '爬山': ['páshān', 'to hike'], '上课': ['shàngkè', 'to have class'],
+  '下课': ['xiàkè', 'class ends'], '自己': ['zìjǐ', 'oneself'],
+  '好玩': ['hǎowán', 'fun'], '有点儿': ['yǒudiǎnr', 'a bit'],
+  '因为': ['yīnwèi', 'because'], '所以': ['suǒyǐ', 'so'],
+  '但是': ['dànshì', 'but'], '虽然': ['suīrán', 'although'],
+  '然后': ['ránhòu', 'then, after that'], '先': ['xiān', 'first'],
+}).forEach(([k, [py, en]]) => { if (!GLOSS.has(k)) GLOSS.set(k, { py, en }); });
 
 const LONGEST_WORD = 4;
 
@@ -595,7 +602,7 @@ function glossSentence(text) {
     if (/[A-Za-z]/.test(c)) {
       let j = i, run = '';
       while (j < chars.length && /[A-Za-z'’.\-]/.test(chars[j])) { run += chars[j]; j += 1; }
-      out.push({ w: run, en: 'name' });
+      out.push({ w: run, py: '', en: 'name' });
       i = j;
       continue;
     }
@@ -605,13 +612,32 @@ function glossSentence(text) {
     let hit = null;
     for (let len = Math.min(LONGEST_WORD, chars.length - i); len >= 1; len -= 1) {
       const cand = chars.slice(i, i + len).join('');
-      if (GLOSS.has(cand)) { hit = { w: cand, en: GLOSS.get(cand) }; break; }
+      const g = GLOSS.get(cand);
+      if (g) { hit = { w: cand, py: g.py, en: g.en }; break; }
     }
 
     if (hit) { out.push(hit); i += [...hit.w].length; }
-    else     { out.push({ w: c, en: '—' }); i += 1; }
+    else     { out.push({ w: c, py: '', en: '—' }); i += 1; }
   }
   return out;
+}
+
+/* One gloss card, reused by the draft check, today's locked entry and any
+   past day you open. */
+function glossCard(text, label) {
+  return `
+    <div class="gloss-card">
+      <div class="label">${h(label)}</div>
+      <div class="gloss">
+        ${glossSentence(text).map(g => `
+          <div class="gloss-unit">
+            <div class="gloss-han han">${h(g.w)}</div>
+            ${g.py ? `<div class="gloss-py">${h(g.py)}</div>` : ''}
+            <div class="gloss-en">${h(g.en)}</div>
+          </div>`).join('')}
+      </div>
+      <div class="gloss-note">Literal, word by word — not how it would be said in English.</div>
+    </div>`;
 }
 
 const todayEntry = () => store.journal.find(e => e.date === todayISO()) || null;
@@ -645,6 +671,7 @@ let S = {
 
   draft: '',                // today's sentence as typed, kept out of the DOM
   checked: null,            // last checkSentence result, null until you check
+  openEntry: null,          // date of the past entry whose gloss is unfolded
   startedAt: 0,
   lastMs: 0,
 
@@ -868,13 +895,15 @@ function renderToday() {
   const dateLabel = iso => parseISO(iso)
     .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-  /* Locked in for today — the input is gone and the sentence stands. */
+  /* Locked in for today — the input is gone and the sentence stands. The
+     gloss stays with it, so it still reads back weeks later. */
   const todayBlock = entry ? `
     <div class="today-locked">
       <div class="label label-on-tint">TODAY · LOCKED IN</div>
       <div class="today-sentence han">${h(entry.text)}</div>
       <button class="audio-btn today-say" data-act="say" data-text="${h(entry.text)}">♪</button>
-    </div>` : `
+    </div>
+    ${glossCard(entry.text, 'WHAT IT SAYS')}` : `
     <div class="today-input-card">
       <div class="label">IN CHINESE, ONE SENTENCE</div>
       <textarea class="today-input han" data-act="draft" rows="2"
@@ -900,28 +929,21 @@ function renderToday() {
         <button class="btn-next" data-act="lock-today">Lock it in</button>
       </div>`) : ''}
 
-    ${c && !c.empty ? `
-      <div class="gloss-card">
-        <div class="label">WORD BY WORD</div>
-        <div class="gloss">
-          ${glossSentence(S.draft.trim()).map(g => `
-            <div class="gloss-unit">
-              <div class="gloss-han han">${h(g.w)}</div>
-              <div class="gloss-en">${h(g.en)}</div>
-            </div>`).join('')}
-        </div>
-        <div class="gloss-note">Literal, word by word — not how it would be said in English.</div>
-      </div>` : ''}
+    ${c && !c.empty ? glossCard(S.draft.trim(), 'WORD BY WORD') : ''}
 
     ${c && c.notes && c.notes.length ? `
       <div class="today-notes">${c.notes.map(n => `<div>${h(n)}</div>`).join('')}</div>` : ''}
   `;
 
+  /* Tap a past day to unfold what it says — kept shut by default so the
+     list stays a list. */
   const list = past.length ? past.map(e => `
-    <div class="today-row">
+    <button class="today-row${e.date === S.openEntry ? ' is-open' : ''}"
+            data-act="open-entry" data-date="${h(e.date)}">
       <div class="today-row-date">${h(dateLabel(e.date))}</div>
       <div class="today-row-text han">${h(e.text)}</div>
-    </div>`).join('')
+    </button>
+    ${e.date === S.openEntry ? glossCard(e.text, 'WHAT IT SAYS') : ''}`).join('')
     : '<div class="empty-note">Nothing yet. One sentence a day adds up.</div>';
 
   return `
@@ -1962,6 +1984,13 @@ $app.addEventListener('click', ev => {
 
     case 'check-today': checkToday(); break;
     case 'lock-today':  lockToday();  break;
+
+    case 'open-entry': {
+      const d = target.dataset.date;
+      S.openEntry = S.openEntry === d ? null : d;   // tap again to close
+      render();
+      break;
+    }
 
     /* Tapping an unselected level just selects it, so you can pick a
        chapter within it. Tapping the selected one drills the whole level. */
