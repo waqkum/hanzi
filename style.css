@@ -1429,13 +1429,16 @@ button {
 /* Emoji fallback keeps the old letterbox; a real photo sets its own. */
 .tf-pic:has(.pic-glyph) { aspect-ratio: 2.2; }
 
-/* Capped so the question still fits a phone without scrolling — the
-   photos only need to be identifiable, not large. */
+/* contain, not cover: the workbook's photos vary from near-square to wide,
+   and cover was cropping the tall ones to fit the slot — q1 lost about
+   half its height, which is exactly the detail you need to answer. The
+   whole photo shows; the placeholder fills whatever is left beside it.
+   Height is still capped so the question fits a phone without scrolling. */
 .tf-pic img {
   display: block;
   width: 100%;
   max-height: min(190px, 24vh);
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* Workbook photo inside an option row. Picture-choice questions have no
@@ -1443,7 +1446,7 @@ button {
 .opt-thumb {
   width: 124px;
   height: 74px;
-  object-fit: cover;
+  object-fit: contain;          /* same reason as .tf-pic img — never crop */
   border-radius: 10px;
   flex: none;
   background: var(--placeholder);

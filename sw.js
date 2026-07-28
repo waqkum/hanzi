@@ -1,7 +1,7 @@
 /* Hanzi — service worker.
    Bump CACHE when any shell file changes so clients pick up the new build. */
 
-const CACHE = 'hanzi-v13';
+const CACHE = 'hanzi-v14';
 
 const SHELL = [
   './',
