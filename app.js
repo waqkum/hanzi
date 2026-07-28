@@ -322,35 +322,88 @@ const TONES = {
   wrong:   { notes: [[311, 0], [233, 0.095]], gain: 0.13, hold: 0.24 },  // Eb4 → Bb3
 };
 
+/* Drop an mp3 (or wav/m4a) at either path and it takes over from the
+   synthesised tone. Nothing else needs changing: a missing or unplayable
+   file falls back silently, so the app is never worse for the absence. */
+const SFX_FILES = { correct: 'sfx/correct.mp3', wrong: 'sfx/wrong.mp3' };
+const SFX_GAIN  = 0.55;                 // samples arrive louder than the tones
+
 let actx = null;
+const sfxBuffer = {};                   // kind → AudioBuffer, or null if none
+const loading = {};
+
+function audioCtx() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  actx = actx || new Ctx();
+  // Safari suspends the context until a gesture; answering is one.
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+
+/* Fetch and decode once. A 404 is the normal case until files are added,
+   so it's recorded as "no sample" rather than reported as a failure. */
+function loadSample(ctx, kind) {
+  if (kind in sfxBuffer || loading[kind]) return;
+  loading[kind] = true;
+  fetch(SFX_FILES[kind])
+    .then(r => (r.ok ? r.arrayBuffer() : Promise.reject()))
+    .then(buf => ctx.decodeAudioData(buf))
+    .then(decoded => { sfxBuffer[kind] = decoded; })
+    .catch(() => { sfxBuffer[kind] = null; })
+    .finally(() => { loading[kind] = false; });
+}
+
+/* Called when a chapter opens: by then there's been a tap, so the context
+   is allowed to start and both files are decoded before the first answer.
+   Without this the first verdict would fall back to a tone while loading,
+   and only later answers would use the sample. */
+function primeSfx() {
+  if (!store.sound) return;
+  const ctx = audioCtx();
+  if (!ctx) return;
+  Object.keys(SFX_FILES).forEach(k => loadSample(ctx, k));
+}
+
+function playTone(ctx, spec) {
+  const now = ctx.currentTime;
+  spec.notes.forEach(([freq, at]) => {
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    osc.type = 'triangle';                 // softer than a sine's pure tone
+    osc.frequency.value = freq;
+    const t0 = now + at;
+    amp.gain.setValueAtTime(0.0001, t0);
+    amp.gain.exponentialRampToValueAtTime(spec.gain, t0 + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, t0 + spec.hold);
+    osc.connect(amp).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + spec.hold + 0.02);
+  });
+}
+
+function playSample(ctx, buffer) {
+  const src = ctx.createBufferSource();
+  const amp = ctx.createGain();
+  src.buffer = buffer;
+  amp.gain.value = SFX_GAIN;
+  src.connect(amp).connect(ctx.destination);
+  src.start();
+}
 
 function sfx(kind) {
   if (!store.sound) return;
   const spec = TONES[kind];
   if (!spec) return;
   try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    actx = actx || new Ctx();
-    // Safari suspends the context until a gesture; answering is one.
-    if (actx.state === 'suspended') actx.resume();
+    const ctx = audioCtx();
+    if (!ctx) return;
 
-    const now = actx.currentTime;
-    spec.notes.forEach(([freq, at]) => {
-      const osc = actx.createOscillator();
-      const amp = actx.createGain();
-      osc.type = 'triangle';                 // softer than a sine's pure tone
-      osc.frequency.value = freq;
-      const t0 = now + at;
-      amp.gain.setValueAtTime(0.0001, t0);
-      amp.gain.exponentialRampToValueAtTime(spec.gain, t0 + 0.012);
-      amp.gain.exponentialRampToValueAtTime(0.0001, t0 + spec.hold);
-      osc.connect(amp).connect(actx.destination);
-      osc.start(t0);
-      osc.stop(t0 + spec.hold + 0.02);
-    });
+    if (sfxBuffer[kind]) { playSample(ctx, sfxBuffer[kind]); return; }
+    if (!(kind in sfxBuffer)) loadSample(ctx, kind);   // have it ready next time
+    playTone(ctx, spec);
   } catch (e) {
-    console.warn('Hanzi: verdict tone unavailable.', e);
+    console.warn('Hanzi: verdict sound unavailable.', e);
   }
 }
 
@@ -1319,6 +1372,7 @@ function startRunner(lesson) {
   });
   prepQuestion();
   go('runner');
+  primeSfx();          // decode the verdict sounds before the first answer
   // After render, so the character spans exist to light up. Both callers
   // reach here from a tap, which is what iOS requires to allow speech.
   speakQuestion();

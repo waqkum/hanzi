@@ -1,7 +1,7 @@
 /* Hanzi — service worker.
    Bump CACHE when any shell file changes so clients pick up the new build. */
 
-const CACHE = 'hanzi-v14';
+const CACHE = 'hanzi-v16';
 
 const SHELL = [
   './',
@@ -15,6 +15,10 @@ const SHELL = [
   './favicon.svg',
   './icon-192.png',
   './icon-512.png',
+  // Optional — absent until sound effects are added. Individual puts below
+  // mean a 404 here costs nothing.
+  './sfx/correct.mp3',
+  './sfx/wrong.mp3',
 ];
 
 self.addEventListener('install', ev => {
