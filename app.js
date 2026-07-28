@@ -310,17 +310,97 @@ function speakAlong(text) {
   }
 }
 
-/* ── Verdict tones ──────────────────────────────────────────────────────
-   Synthesised rather than shipped as files: two short notes weigh nothing,
-   need no network, and can't fall out of sync with the cache. Correct
-   rises, wrong falls — the shape carries the meaning even at low volume.
-   Kept quiet and brief so it reads as a nudge, not an alarm.
+/* ── Verdict sounds ─────────────────────────────────────────────────────
+   Synthesised rather than shipped as files: they weigh nothing, need no
+   network, and can't fall out of sync with the cache.
+
+   Correct rises through a major chord, wrong sags. The shape carries the
+   verdict even at low volume, which is what makes it readable in a pocket
+   — the character on top is what makes it worth hearing thirty-five times.
+   Still under a third of a second each; fun and wearing thin are close
+   neighbours at this repetition rate.
    ─────────────────────────────────────────────────────────────────────── */
 
-const TONES = {
-  correct: { notes: [[659, 0], [988, 0.085]], gain: 0.16, hold: 0.20 },  // E5 → B5
-  wrong:   { notes: [[311, 0], [233, 0.095]], gain: 0.13, hold: 0.24 },  // Eb4 → Bb3
-};
+/* One oscillator with its own envelope. Exponential ramps throughout —
+   linear ones click on the way out, and gain can never touch true zero. */
+function voice(ctx, { type = 'triangle', freq, at = 0, attack = 0.008,
+                      hold = 0.18, gain = 0.12, bendTo = null, dest }) {
+  const t0  = ctx.currentTime + at;
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (bendTo) osc.frequency.exponentialRampToValueAtTime(bendTo, t0 + hold);
+
+  amp.gain.setValueAtTime(0.0001, t0);
+  amp.gain.exponentialRampToValueAtTime(gain, t0 + attack);
+  amp.gain.exponentialRampToValueAtTime(0.0001, t0 + hold);
+
+  osc.connect(amp).connect(dest || ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + hold + 0.03);
+  return osc;
+}
+
+/* E major, rising — E5, G#5, B5, then E6 to land on. Each note doubled an
+   octave up at low level for shimmer, and the last one bends up a touch,
+   which is what stops it sounding like a doorbell and starts it sounding
+   pleased. */
+function soundCorrect(ctx) {
+  const notes = [659.26, 830.61, 987.77, 1318.51];
+  notes.forEach((f, i) => {
+    const last = i === notes.length - 1;
+    const at   = i * 0.062;
+    voice(ctx, { freq: f, at, hold: last ? 0.38 : 0.15,
+                 gain: last ? 0.15 : 0.11,
+                 bendTo: last ? f * 1.012 : null });
+    voice(ctx, { type: 'sine', freq: f * 2, at, attack: 0.006,
+                 hold: last ? 0.26 : 0.1, gain: last ? 0.045 : 0.03 });
+  });
+}
+
+/* A soft sag rather than a buzz: one voice gliding down a fifth with a
+   slow wobble on it, over a low round thud. Reads as "ah, no" instead of
+   a game-show buzzer, which matters when you'll hear it a lot. */
+function soundWrong(ctx) {
+  const t0 = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  const tone = ctx.createBiquadFilter();
+  tone.type = 'lowpass';
+  tone.frequency.value = 1400;          // shaves the reedy top off the triangle
+
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(349.23, t0);                       // F4
+  osc.frequency.exponentialRampToValueAtTime(196, t0 + 0.20);     // down to G3
+
+  // Gentle vibrato — the wobble that gives it personality.
+  const lfo = ctx.createOscillator();
+  const lfoAmt = ctx.createGain();
+  lfo.frequency.value = 11;
+  lfoAmt.gain.value = 7;                // ±7 Hz
+  lfo.connect(lfoAmt).connect(osc.frequency);
+
+  /* Three-stage envelope, not two. A single exponential ramp front-loads
+     its decay so hard that the sound is inaudible before the pitch has
+     finished falling — the descent was there but you couldn't hear it.
+     The middle point holds the body up while the glide does its work. */
+  amp.gain.setValueAtTime(0.0001, t0);
+  amp.gain.exponentialRampToValueAtTime(0.16, t0 + 0.012);
+  amp.gain.exponentialRampToValueAtTime(0.10, t0 + 0.18);
+  amp.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.34);
+
+  osc.connect(tone).connect(amp).connect(ctx.destination);
+  osc.start(t0); osc.stop(t0 + 0.38);
+  lfo.start(t0); lfo.stop(t0 + 0.38);
+
+  // Low body underneath, so it lands rather than just fades.
+  voice(ctx, { type: 'sine', freq: 110, attack: 0.012, hold: 0.22, gain: 0.11 });
+}
+
+const TONES = { correct: soundCorrect, wrong: soundWrong };
 
 /* Drop an mp3 (or wav/m4a) at either path and it takes over from the
    synthesised tone. Nothing else needs changing: a missing or unplayable
@@ -365,23 +445,6 @@ function primeSfx() {
   Object.keys(SFX_FILES).forEach(k => loadSample(ctx, k));
 }
 
-function playTone(ctx, spec) {
-  const now = ctx.currentTime;
-  spec.notes.forEach(([freq, at]) => {
-    const osc = ctx.createOscillator();
-    const amp = ctx.createGain();
-    osc.type = 'triangle';                 // softer than a sine's pure tone
-    osc.frequency.value = freq;
-    const t0 = now + at;
-    amp.gain.setValueAtTime(0.0001, t0);
-    amp.gain.exponentialRampToValueAtTime(spec.gain, t0 + 0.012);
-    amp.gain.exponentialRampToValueAtTime(0.0001, t0 + spec.hold);
-    osc.connect(amp).connect(ctx.destination);
-    osc.start(t0);
-    osc.stop(t0 + spec.hold + 0.02);
-  });
-}
-
 function playSample(ctx, buffer) {
   const src = ctx.createBufferSource();
   const amp = ctx.createGain();
@@ -393,15 +456,15 @@ function playSample(ctx, buffer) {
 
 function sfx(kind) {
   if (!store.sound) return;
-  const spec = TONES[kind];
-  if (!spec) return;
+  const build = TONES[kind];
+  if (!build) return;
   try {
     const ctx = audioCtx();
     if (!ctx) return;
 
     if (sfxBuffer[kind]) { playSample(ctx, sfxBuffer[kind]); return; }
     if (!(kind in sfxBuffer)) loadSample(ctx, kind);   // have it ready next time
-    playTone(ctx, spec);
+    build(ctx);
   } catch (e) {
     console.warn('Hanzi: verdict sound unavailable.', e);
   }
