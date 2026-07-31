@@ -31,10 +31,15 @@
    correct pick, `why.wrong` after an incorrect one.
 
    ── Provenance ────────────────────────────────────────────────────────
-   Lessons 1–3 are TRANSCRIBED from HSK 标准教程 2（练习册）, Reading Part
-   III (questions 26–30 of each lesson), and checked against the published
-   answer key. English translations are mine; the workbook prints English
-   only for the worked example. Lesson 4 is still placeholder content.
+   TRANSCRIBED from HSK 标准教程 2（练习册）and checked question by question
+   against the published answer key. Photographs are cropped from the page
+   scans. English translations are mine — the workbook prints English only
+   for the worked example.
+
+     Chapter 1  complete, questions 1–35, with photographs
+     Chapter 2  complete, questions 1–35, with photographs
+     Chapter 3  Reading Part III only (questions 26–30), no photographs
+     Chapter 4  placeholder, written before the workbook was to hand
    ═══════════════════════════════════════════════════════════════════════ */
 
 const EXERCISES = {
@@ -408,10 +413,282 @@ const EXERCISES = {
             wrong:'开 — driving — appears in both halves.' } },
   ],
 
-  /* ── HSK 2 · Lesson 2 — 我每天六点起床 ───────────────────────────────
-     Transcribed: workbook p.16, questions 26–30. Key: √ × √ × √         */
+  /* ── HSK 2 · Chapter 2 — 我每天六点起床 ─────────────────────────────
+     TRANSCRIBED IN FULL, workbook pp.11–17, questions 1–35 in book order.
+     Answer key: 1-5 √×√√√ · 6-10 FECAB · 11-15 BCAAB · 16-20 FCBEA ·
+     21-25 BCAFD · 26-30 √×√×√ · 31-35 DCABF — all verified.
+     ─────────────────────────────────────────────────────────────────── */
   '2-2': [
-    { type:'truefalse', label:'TRUE OR FALSE · P.16',
+
+    /* ── Listening Part I · 1–5 · hear the sentence, judge the picture ── */
+    { type:'truefalse', label:'LISTENING · Q1 · P.11',
+      img:'img/2-2/q1.jpg', imgAlt:'a nurse tending someone in a hospital bed',
+      han:'医生说要住一个月，现在不能出院。',
+      py:'Yīshēng shuō yào zhù yí ge yuè, xiànzài bù néng chū yuàn.',
+      en:'The doctor says a month in hospital — he can’t be discharged yet.',
+      claim:'图片和句子一样吗？', claimPy:'Túpiàn hé jùzi yíyàng ma?',
+      claimEn:'Does the picture match the sentence?',
+      answer:0,
+      why:{ right:'住院 — in hospital, which is what the picture shows.',
+            wrong:'不能出院 means still in hospital, and that is the picture.' } },
+
+    { type:'truefalse', label:'LISTENING · Q2 · P.11',
+      img:'img/2-2/q2.jpg', imgAlt:'a couple at breakfast with a newspaper',
+      han:'我爸爸每天早上都要运动。',
+      py:'Wǒ bàba měi tiān zǎoshang dōu yào yùndòng.',
+      en:'My dad exercises every morning.',
+      claim:'图片和句子一样吗？', claimPy:'Túpiàn hé jùzi yíyàng ma?',
+      claimEn:'Does the picture match the sentence?',
+      answer:1,
+      why:{ right:'运动 is exercise; they are sitting down to breakfast.',
+            wrong:'The picture is breakfast and a newspaper, not 运动.' } },
+
+    { type:'truefalse', label:'LISTENING · Q3 · P.11',
+      img:'img/2-2/q3.jpg', imgAlt:'a hand lifting a telephone receiver',
+      han:'张先生已经给大卫打电话了。',
+      py:'Zhāng xiānsheng yǐjīng gěi Dàwèi dǎ diànhuà le.',
+      en:'Mr Zhang has already phoned David.',
+      claim:'图片和句子一样吗？', claimPy:'Túpiàn hé jùzi yíyàng ma?',
+      claimEn:'Does the picture match the sentence?',
+      answer:0,
+      why:{ right:'打电话 — making a call, and the picture is a telephone.',
+            wrong:'打电话 means to phone, which is what the picture shows.' } },
+
+    { type:'truefalse', label:'LISTENING · Q4 · P.11',
+      img:'img/2-2/q4.jpg', imgAlt:'a man holding a tissue to his face',
+      han:'他最近太累了，已经生病了。',
+      py:'Tā zuìjìn tài lèi le, yǐjīng shēng bìng le.',
+      en:'He’s been too tired lately and has fallen ill.',
+      claim:'图片和句子一样吗？', claimPy:'Túpiàn hé jùzi yíyàng ma?',
+      claimEn:'Does the picture match the sentence?',
+      answer:0,
+      why:{ right:'生病了 — unwell, which is what the picture shows.',
+            wrong:'生病 means fallen ill, and that is the picture.' } },
+
+    { type:'truefalse', label:'LISTENING · Q5 · P.11',
+      img:'img/2-2/q5.jpg', imgAlt:'someone asleep beside an alarm clock',
+      han:'他每天十二点睡觉，早上九点起床。',
+      py:'Tā měi tiān shí’èr diǎn shuì jiào, zǎoshang jiǔ diǎn qǐ chuáng.',
+      en:'He sleeps at twelve every day and gets up at nine.',
+      claim:'图片和句子一样吗？', claimPy:'Túpiàn hé jùzi yíyàng ma?',
+      claimEn:'Does the picture match the sentence?',
+      answer:0,
+      why:{ right:'睡觉 and 起床 — sleeping and an alarm clock.',
+            wrong:'The published key marks this one as matching.' } },
+
+    /* ── Listening Part II · 6–10 · hear the dialogue, pick the picture ── */
+    { type:'listening', label:'LISTENING · Q6 · P.12',
+      audio:'你爸爸每天运动吗？对，他每天早上出去跑步。',
+      prompt:'Which picture matches the dialogue?',
+      options:[ {img:'img/2-2/lis-c.jpg', en:'a woman in a library'},
+                {img:'img/2-2/lis-f.jpg', en:'an older man jogging'},
+                {img:'img/2-2/lis-b.jpg', en:'a doctor holding medicine'} ],
+      answer:1,
+      why:{ right:'出去跑步 — he goes running every morning.',
+            wrong:'跑步 is running.' } },
+
+    { type:'listening', label:'LISTENING · Q7 · P.12',
+      audio:'你怎么了？身体不好，已经两天了。',
+      prompt:'Which picture matches the dialogue?',
+      options:[ {img:'img/2-2/lis-e.jpg', en:'a woman holding her stomach'},
+                {img:'img/2-2/lis-a.jpg', en:'a girl being measured'},
+                {img:'img/2-2/lis-d.jpg', en:'someone playing football'} ],
+      answer:0,
+      why:{ right:'身体不好 — she has been unwell for two days.',
+            wrong:'身体不好 means she is not well.' } },
+
+    { type:'listening', label:'LISTENING · Q8 · P.12',
+      audio:'明天下午你有时间吗？我们去看电影吧。对不起，我要看书，没有时间。',
+      prompt:'Which picture matches the dialogue?',
+      options:[ {img:'img/2-2/lis-b.jpg', en:'a doctor holding medicine'},
+                {img:'img/2-2/lis-d.jpg', en:'someone playing football'},
+                {img:'img/2-2/lis-c.jpg', en:'a woman in a library'} ],
+      answer:2,
+      why:{ right:'我要看书 — she has reading to do, so the library.',
+            wrong:'She turns the film down because 我要看书.' } },
+
+    { type:'listening', label:'LISTENING · Q9 · P.12',
+      audio:'你的小女儿多高？一米多一点儿吧。',
+      prompt:'Which picture matches the dialogue?',
+      options:[ {img:'img/2-2/lis-a.jpg', en:'a girl being measured'},
+                {img:'img/2-2/lis-f.jpg', en:'an older man jogging'},
+                {img:'img/2-2/lis-e.jpg', en:'a woman holding her stomach'} ],
+      answer:0,
+      why:{ right:'多高 and 一米多 — they are talking about height.',
+            wrong:'多高 asks how tall.' } },
+
+    { type:'listening', label:'LISTENING · Q10 · P.12',
+      audio:'医生，我明天能出院吗？能，回家每天吃这个药。',
+      prompt:'Which picture matches the dialogue?',
+      options:[ {img:'img/2-2/lis-c.jpg', en:'a woman in a library'},
+                {img:'img/2-2/lis-b.jpg', en:'a doctor holding medicine'},
+                {img:'img/2-2/lis-a.jpg', en:'a girl being measured'} ],
+      answer:1,
+      why:{ right:'医生 and 吃这个药 — the doctor and the medicine.',
+            wrong:'The doctor sends her home with 药.' } },
+
+    /* ── Listening Part III · 11–15 · dialogue, then answer the question ── */
+    { type:'listening', label:'LISTENING · Q11 · P.13',
+      audio:'你什么时候能出院？医生说要再住三天看一看。问：男的明天能出院吗？',
+      prompt:'Can he leave hospital tomorrow?',
+      options:[ {han:'能', py:'néng', en:'yes, he can'},
+                {han:'不能', py:'bù néng', en:'no, he can’t'},
+                {han:'不知道', py:'bù zhīdào', en:'don’t know'} ],
+      answer:1,
+      why:{ right:'再住三天 — three more days, so not tomorrow.',
+            wrong:'再住三天 rules tomorrow out.' } },
+
+    { type:'listening', label:'LISTENING · Q12 · P.13',
+      audio:'你每天早上几点起床？七点多，星期六和星期天十点多起床。问：星期六几点起床？',
+      prompt:'What time do they get up on Saturday?',
+      options:[ {han:'六点多', py:'liù diǎn duō', en:'just after six'},
+                {han:'七点多', py:'qī diǎn duō', en:'just after seven'},
+                {han:'十点多', py:'shí diǎn duō', en:'just after ten'} ],
+      answer:2,
+      why:{ right:'七点多 is the weekday; 星期六 gets 十点多.',
+            wrong:'Saturday and Sunday are the late ones — 十点多.' } },
+
+    { type:'listening', label:'LISTENING · Q13 · P.13',
+      audio:'你一个人做饭累不累？不累，我很喜欢做饭。问：她觉得做饭累不累？',
+      prompt:'Does she find cooking tiring?',
+      options:[ {han:'不累', py:'bú lèi', en:'not tiring'},
+                {han:'很累', py:'hěn lèi', en:'very tiring'},
+                {han:'累', py:'lèi', en:'tiring'} ],
+      answer:0,
+      why:{ right:'不累，我很喜欢做饭 — she enjoys it.',
+            wrong:'She answers 不累 outright.' } },
+
+    { type:'listening', label:'LISTENING · Q14 · P.13',
+      audio:'你女儿今年多大了？今年二十三岁，已经工作了。问：他的女儿现在工作了吗？',
+      prompt:'Is his daughter working now?',
+      options:[ {han:'工作了', py:'gōngzuò le', en:'she’s working'},
+                {han:'在学习', py:'zài xuéxí', en:'she’s studying'},
+                {han:'在找工作', py:'zài zhǎo gōngzuò', en:'she’s job-hunting'} ],
+      answer:0,
+      why:{ right:'已经工作了 — already working.',
+            wrong:'已经工作了 settles it.' } },
+
+    { type:'listening', label:'LISTENING · Q15 · P.13',
+      audio:'我这几天身体不好，吃了很多药。我和你一起去医院看看吧。问：女的怎么了？',
+      prompt:'What’s the matter with her?',
+      options:[ {han:'去医院了', py:'qù yīyuàn le', en:'she went to hospital'},
+                {han:'病了', py:'bìng le', en:'she’s ill'},
+                {han:'身体好多了', py:'shēntǐ hǎo duō le', en:'she’s much better'} ],
+      answer:1,
+      why:{ right:'身体不好 and 吃了很多药 — she is ill.',
+            wrong:'They have not gone yet — he is suggesting it.' } },
+
+    /* ── Reading Part I · 16–20 · choose the right picture ── */
+    { type:'reading', label:'READING · Q16 · P.14',
+      han:'麦克先生最不喜欢住院。', py:'Màikè xiānsheng zuì bù xǐhuan zhù yuàn.',
+      en:'Mr Mike hates being in hospital most of all.',
+      prompt:'Which picture goes with this sentence?',
+      options:[ {img:'img/2-2/read-f.jpg', en:'a doctor with a patient'},
+                {img:'img/2-2/read-c.jpg', en:'a man buried in paperwork'},
+                {img:'img/2-2/read-b.jpg', en:'people running'} ],
+      answer:0,
+      why:{ right:'住院 — hospital, so the doctor and patient.',
+            wrong:'住院 means staying in hospital.' } },
+
+    { type:'reading', label:'READING · Q17 · P.14',
+      han:'爸爸每天工作很忙，星期六也不休息。',
+      py:'Bàba měi tiān gōngzuò hěn máng, xīngqīliù yě bù xiūxi.',
+      en:'Dad is busy with work every day and doesn’t rest on Saturdays either.',
+      prompt:'Which picture goes with this sentence?',
+      options:[ {img:'img/2-2/read-a.jpg', en:'a woman waking up'},
+                {img:'img/2-2/read-c.jpg', en:'a man buried in paperwork'},
+                {img:'img/2-2/read-e.jpg', en:'a handful of pills'} ],
+      answer:1,
+      why:{ right:'工作很忙 — swamped with work.',
+            wrong:'很忙 and 不休息 point to the desk.' } },
+
+    { type:'reading', label:'READING · Q18 · P.14',
+      han:'我每天下午和同学一起去跑步。',
+      py:'Wǒ měi tiān xiàwǔ hé tóngxué yìqǐ qù pǎo bù.',
+      en:'Every afternoon I go running with my classmates.',
+      prompt:'Which picture goes with this sentence?',
+      options:[ {img:'img/2-2/read-e.jpg', en:'a handful of pills'},
+                {img:'img/2-2/read-f.jpg', en:'a doctor with a patient'},
+                {img:'img/2-2/read-b.jpg', en:'people running'} ],
+      answer:2,
+      why:{ right:'跑步 — running, and several of them.',
+            wrong:'跑步 means running.' } },
+
+    { type:'reading', label:'READING · Q19 · P.14',
+      han:'这是一个星期的药，每天早上吃。',
+      py:'Zhè shì yí ge xīngqī de yào, měi tiān zǎoshang chī.',
+      en:'This is a week’s medicine — take it every morning.',
+      prompt:'Which picture goes with this sentence?',
+      options:[ {img:'img/2-2/read-e.jpg', en:'a handful of pills'},
+                {img:'img/2-2/read-b.jpg', en:'people running'},
+                {img:'img/2-2/read-a.jpg', en:'a woman waking up'} ],
+      answer:0,
+      why:{ right:'药 — medicine.', wrong:'药 means medicine.' } },
+
+    { type:'reading', label:'READING · Q20 · P.14',
+      han:'妈妈每天早上七点前起床。',
+      py:'Māma měi tiān zǎoshang qī diǎn qián qǐ chuáng.',
+      en:'Mum gets up before seven every morning.',
+      prompt:'Which picture goes with this sentence?',
+      options:[ {img:'img/2-2/read-c.jpg', en:'a man buried in paperwork'},
+                {img:'img/2-2/read-a.jpg', en:'a woman waking up'},
+                {img:'img/2-2/read-f.jpg', en:'a doctor with a patient'} ],
+      answer:1,
+      why:{ right:'起床 — getting up, with the alarm clock.',
+            wrong:'起床 means getting out of bed.' } },
+
+    /* ── Reading Part II · 21–25 · choose the word for the bracket ── */
+    { type:'fill', label:'READING · Q21 · P.15',
+      pre:'我们', post:'个星期六都工作。',
+      py:'Wǒmen ___ ge xīngqīliù dōu gōngzuò.',
+      en:'We work every Saturday.',
+      options:[ {han:'每',py:'měi'}, {han:'忙',py:'máng'},
+                {han:'出去',py:'chūqu'}, {han:'知道',py:'zhīdào'} ],
+      answer:0,
+      why:{ right:'每 + measure word — 每个星期六, every Saturday.',
+            wrong:'每个 is the pattern for "every".' } },
+
+    { type:'fill', label:'READING · Q22 · P.15',
+      pre:'对不起，我很', post:'，没时间去看电影。',
+      py:'Duìbuqǐ, wǒ hěn ___, méi shíjiān qù kàn diànyǐng.',
+      en:'Sorry, I’m very busy — no time to go to a film.',
+      options:[ {han:'生病',py:'shēng bìng'}, {han:'忙',py:'máng'},
+                {han:'每',py:'měi'}, {han:'贵',py:'guì'} ],
+      answer:1,
+      why:{ right:'很忙 explains 没时间.', wrong:'没时间 follows from 忙.' } },
+
+    { type:'fill', label:'READING · Q23 · P.15',
+      pre:'他不在家，下午四点', post:'买东西了。',
+      py:'Tā bú zài jiā, xiàwǔ sì diǎn ___ mǎi dōngxi le.',
+      en:'He isn’t home — he went out at four to do some shopping.',
+      options:[ {han:'出去',py:'chūqu'}, {han:'知道',py:'zhīdào'},
+                {han:'忙',py:'máng'}, {han:'每',py:'měi'} ],
+      answer:0,
+      why:{ right:'不在家 — he went 出去, out.',
+            wrong:'不在家 tells you he went out.' } },
+
+    { type:'fill', label:'READING · Q24 · P.15',
+      pre:'我的小猫不想吃东西，我觉得它', post:'了。',
+      py:'Wǒ de xiǎo māo bù xiǎng chī dōngxi, wǒ juéde tā ___ le.',
+      en:'My kitten won’t eat — I think it’s ill.',
+      options:[ {han:'贵',py:'guì'}, {han:'出去',py:'chūqu'},
+                {han:'生病',py:'shēng bìng'}, {han:'每',py:'měi'} ],
+      answer:2,
+      why:{ right:'不想吃东西 — off its food, so 生病了.',
+            wrong:'Not eating is the sign of 生病.' } },
+
+    { type:'fill', label:'READING · Q25 · P.15',
+      pre:'我也不', post:'北京的天气，你问问小李，他是北京人。',
+      py:'Wǒ yě bù ___ Běijīng de tiānqì, nǐ wènwen xiǎo Lǐ, tā shì Běijīng rén.',
+      en:'I don’t know Beijing’s weather either — ask Xiao Li, he’s from Beijing.',
+      options:[ {han:'忙',py:'máng'}, {han:'生病',py:'shēng bìng'},
+                {han:'出去',py:'chūqu'}, {han:'知道',py:'zhīdào'} ],
+      answer:3,
+      why:{ right:'不知道 — and that is why he says go and ask someone else.',
+            wrong:'你问问小李 only makes sense after 不知道.' } },
+
+    /* ── Reading Part III · 26–30 · true or false ── */
+    { type:'truefalse', label:'READING · Q26 · P.16',
       han:'医生说我要住两天院，明天能出院。',
       py:'Yīshēng shuō wǒ yào zhù liǎng tiān yuàn, míngtiān néng chū yuàn.',
       en:'The doctor said I have to stay in hospital for two days and can leave tomorrow.',
@@ -421,7 +698,7 @@ const EXERCISES = {
       why:{ right:'明天能出院 — tomorrow, which means not today.',
             wrong:'明天能出院 puts the discharge tomorrow, so today is ruled out.' } },
 
-    { type:'truefalse', label:'TRUE OR FALSE · P.16',
+    { type:'truefalse', label:'READING · Q27 · P.16',
       han:'我的小猫生病了，你知道去哪个医院好吗？',
       py:'Wǒ de xiǎo māo shēng bìng le, nǐ zhīdào qù nǎge yīyuàn hǎo ma?',
       en:'My kitten is ill — do you know which hospital would be best?',
@@ -431,7 +708,7 @@ const EXERCISES = {
       why:{ right:'生病了 and still asking where to take it — it has not recovered.',
             wrong:'They are still asking 去哪个医院好, so the kitten is not better.' } },
 
-    { type:'truefalse', label:'TRUE OR FALSE · P.16',
+    { type:'truefalse', label:'READING · Q28 · P.16',
       han:'你星期天也去学校吗？太忙了！',
       py:'Nǐ xīngqītiān yě qù xuéxiào ma? Tài máng le!',
       en:'You go to school on Sundays as well? That’s far too busy!',
@@ -441,7 +718,7 @@ const EXERCISES = {
       why:{ right:'也去学校 — 也 means Sunday is another working day, so no rest.',
             wrong:'星期天也去学校 — the 也 tells you Sunday is spent at school too.' } },
 
-    { type:'truefalse', label:'TRUE OR FALSE · P.16',
+    { type:'truefalse', label:'READING · Q29 · P.16',
       han:'这个药每天中午吃，晚饭后不要吃。',
       py:'Zhège yào měi tiān zhōngwǔ chī, wǎnfàn hòu búyào chī.',
       en:'Take this medicine at midday every day; don’t take it after dinner.',
@@ -451,7 +728,7 @@ const EXERCISES = {
       why:{ right:'晚饭后不要吃 — after dinner is exactly when not to take it.',
             wrong:'不要 makes it a prohibition: not after dinner, but at 中午.' } },
 
-    { type:'truefalse', label:'TRUE OR FALSE · P.16',
+    { type:'truefalse', label:'READING · Q30 · P.16',
       han:'我儿子不太高，他今年十四岁，一米五几。',
       py:'Wǒ érzi bú tài gāo, tā jīnnián shísì suì, yì mǐ wǔ jǐ.',
       en:'My son isn’t very tall; he’s fourteen this year, about one metre fifty-something.',
@@ -460,12 +737,68 @@ const EXERCISES = {
       answer:0,
       why:{ right:'十四岁 falls inside 十多岁 — somewhere past ten.',
             wrong:'十四岁 is fourteen, which is 十多岁.' } },
+
+    /* ── Reading Part IV · 31–35 · match the halves of a dialogue ── */
+    { type:'reading', label:'READING · Q31 · P.17',
+      han:'什么？已经三天了，为什么？', py:'Shénme? Yǐjīng sān tiān le, wèi shénme?',
+      en:'What? Three days already — why?',
+      prompt:'Which line does this answer?',
+      options:[ {han:'医生说他不能出院。', py:'Yīshēng shuō tā bù néng chū yuàn.', en:'The doctor says he can’t leave hospital.'},
+                {han:'他儿子今年八岁了。', py:'Tā érzi jīnnián bā suì le.', en:'His son is eight this year.'},
+                {han:'你每天什么时候睡觉？', py:'Nǐ měi tiān shénme shíhou shuì jiào?', en:'What time do you go to sleep?'} ],
+      answer:0,
+      why:{ right:'已经三天了 responds to being kept in hospital.',
+            wrong:'三天 picks up on the length of the stay.' } },
+
+    { type:'reading', label:'READING · Q32 · P.17',
+      han:'我也不喜欢，我早上没时间。', py:'Wǒ yě bù xǐhuan, wǒ zǎoshang méi shíjiān.',
+      en:'I don’t like it either — I’ve no time in the mornings.',
+      prompt:'Which line does this answer?',
+      options:[ {han:'星期六也不休息，你工作累不累？', py:'Xīngqīliù yě bù xiūxi, nǐ gōngzuò lèi bu lèi?', en:'Not resting Saturdays either — is work tiring?'},
+                {han:'我不喜欢早上运动，我喜欢下午和朋友一起踢足球。', py:'Wǒ bù xǐhuan zǎoshang yùndòng, wǒ xǐhuan xiàwǔ hé péngyou yìqǐ tī zúqiú.', en:'I don’t like exercising in the morning; I prefer afternoon football with friends.'},
+                {han:'他儿子今年八岁了。', py:'Tā érzi jīnnián bā suì le.', en:'His son is eight this year.'} ],
+      answer:1,
+      why:{ right:'我也不喜欢 agrees about mornings.',
+            wrong:'也 marks agreement with the morning-exercise remark.' } },
+
+    { type:'reading', label:'READING · Q33 · P.17',
+      han:'是啊，已经一米四了。', py:'Shì a, yǐjīng yì mǐ sì le.',
+      en:'Yes — he’s one metre forty already.',
+      prompt:'Which line does this answer?',
+      options:[ {han:'他儿子今年八岁了。', py:'Tā érzi jīnnián bā suì le.', en:'His son is eight this year.'},
+                {han:'你每天什么时候睡觉？', py:'Nǐ měi tiān shénme shíhou shuì jiào?', en:'What time do you go to sleep?'},
+                {han:'医生说他不能出院。', py:'Yīshēng shuō tā bù néng chū yuàn.', en:'The doctor says he can’t leave hospital.'} ],
+      answer:0,
+      why:{ right:'A height follows on from the child’s age.',
+            wrong:'一米四 is about the boy who is 八岁.' } },
+
+    { type:'reading', label:'READING · Q34 · P.17',
+      han:'没关系，星期天我有不少时间休息。', py:'Méi guānxi, xīngqītiān wǒ yǒu bù shǎo shíjiān xiūxi.',
+      en:'It’s fine — I get plenty of time to rest on Sunday.',
+      prompt:'Which line does this answer?',
+      options:[ {han:'你每天什么时候睡觉？', py:'Nǐ měi tiān shénme shíhou shuì jiào?', en:'What time do you go to sleep?'},
+                {han:'星期六也不休息，你工作累不累？', py:'Xīngqīliù yě bù xiūxi, nǐ gōngzuò lèi bu lèi?', en:'Not resting Saturdays either — is work tiring?'},
+                {han:'医生说他不能出院。', py:'Yīshēng shuō tā bù néng chū yuàn.', en:'The doctor says he can’t leave hospital.'} ],
+      answer:1,
+      why:{ right:'星期天…休息 answers the question about not resting on Saturday.',
+            wrong:'休息 appears in both halves — Saturday asked, Sunday answered.' } },
+
+    { type:'reading', label:'READING · Q35 · P.17',
+      han:'九点多吧，很早。我早上起床也很早。', py:'Jiǔ diǎn duō ba, hěn zǎo. Wǒ zǎoshang qǐ chuáng yě hěn zǎo.',
+      en:'About nine, quite early. I get up early too.',
+      prompt:'Which line does this answer?',
+      options:[ {han:'他儿子今年八岁了。', py:'Tā érzi jīnnián bā suì le.', en:'His son is eight this year.'},
+                {han:'星期六也不休息，你工作累不累？', py:'Xīngqīliù yě bù xiūxi, nǐ gōngzuò lèi bu lèi?', en:'Not resting Saturdays either — is work tiring?'},
+                {han:'你每天什么时候睡觉？', py:'Nǐ měi tiān shénme shíhou shuì jiào?', en:'What time do you go to sleep?'} ],
+      answer:2,
+      why:{ right:'九点多 is a bedtime, answering 什么时候睡觉.',
+            wrong:'什么时候睡觉 wants a time, and 九点多 is one.' } },
   ],
 
   /* ── HSK 2 · Lesson 3 — 左边那个红色的是我的 ─────────────────────────
      Transcribed: workbook p.26, questions 26–30. Key: √ √ × √ ×         */
   '2-3': [
-    { type:'truefalse', label:'TRUE OR FALSE · P.26',
+    { type:'truefalse', label:'READING · Q26 · P.26',
       han:'这个房间是丽丽的，她喜欢粉色的房间。',
       py:'Zhège fángjiān shì Lìli de, tā xǐhuan fěnsè de fángjiān.',
       en:'This room is Lili’s — she likes pink rooms.',
@@ -475,7 +808,7 @@ const EXERCISES = {
       why:{ right:'The room is hers and she likes 粉色的房间 — the two join up.',
             wrong:'这个房间是丽丽的 plus 她喜欢粉色的房间 gives you a pink room.' } },
 
-    { type:'truefalse', label:'TRUE OR FALSE · P.26',
+    { type:'truefalse', label:'READING · Q27 · P.26',
       han:'桌子上的报纸是昨天的，今天送报纸的没来。',
       py:'Zhuōzi shang de bàozhǐ shì zuótiān de, jīntiān sòng bàozhǐ de méi lái.',
       en:'The paper on the table is yesterday’s; today’s delivery never came.',
@@ -485,7 +818,7 @@ const EXERCISES = {
       why:{ right:'是昨天的 — yesterday’s, so by definition not today’s.',
             wrong:'The paper is 昨天的 and today’s never arrived.' } },
 
-    { type:'truefalse', label:'TRUE OR FALSE · P.26',
+    { type:'truefalse', label:'READING · Q28 · P.26',
       han:'你的药在房间里，这是爸爸的。',
       py:'Nǐ de yào zài fángjiān li, zhè shì bàba de.',
       en:'Your medicine is in the room; this one is Dad’s.',
@@ -495,7 +828,7 @@ const EXERCISES = {
       why:{ right:'你的药 is the one 在房间里; 这 — the one here — is Dad’s.',
             wrong:'The one in the room is 你的; it is 这 that belongs to Dad.' } },
 
-    { type:'truefalse', label:'TRUE OR FALSE · P.26',
+    { type:'truefalse', label:'READING · Q29 · P.26',
       han:'这块手表是昨天买的，我很喜欢。',
       py:'Zhè kuài shǒubiǎo shì zuótiān mǎi de, wǒ hěn xǐhuan.',
       en:'I bought this watch yesterday — I like it a lot.',
@@ -505,7 +838,7 @@ const EXERCISES = {
       why:{ right:'是…的 marks when it happened — 昨天买的.',
             wrong:'是昨天买的 states the purchase was yesterday.' } },
 
-    { type:'truefalse', label:'TRUE OR FALSE · P.26',
+    { type:'truefalse', label:'READING · Q30 · P.26',
       han:'小王，你喜欢哪个颜色的杯子？给你一个。',
       py:'Xiǎo Wáng, nǐ xǐhuan nǎge yánsè de bēizi? Gěi nǐ yí ge.',
       en:'Xiao Wang, which colour cup do you like? I’ll give you one.',
