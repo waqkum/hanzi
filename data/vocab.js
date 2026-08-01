@@ -3,10 +3,25 @@
    HSK 1 (150 words) and HSK 2 (149 words), tagged to the lesson of
    HSK Standard Course in which each word is introduced.
 
-   NOTE ON LESSON TAGS: the word lists themselves are the official HSK
-   1/2 lists. The `lesson` tag is a best-effort mapping onto Standard
-   Course 1 and 2 — spot-check it against your own books and correct
-   here; nothing else in the app hardcodes which word belongs where.
+   NOTE ON CHAPTER TAGS. The word lists themselves are the official HSK
+   1/2 lists and can be trusted. The `les` tag — which chapter a word
+   belongs to — varies in quality:
+
+     HSK 2 ch.1–2  Grounded in the transcribed workbook. Chapter 1's ten
+                   words all appear in its exercises; chapter 2 has
+                   twelve of sixteen, the other four (上班 晚上 小时 洗)
+                   being daily-routine words that fit the chapter but
+                   happen not to be drilled in it. Most come from the
+                   Reading Part II word bank, which is drawn straight
+                   from the chapter's vocabulary. Still an inference from
+                   usage, not the textbook's 生词 list.
+     HSK 2 ch.3–15 Guesswork, and known to be unreliable — these were
+                   assigned before the real chapter titles were known.
+     HSK 1 all     Guesswork, never checked against anything.
+
+   Transcribing a chapter's exercises is what makes its tags real. Until
+   then, treat "by chapter" flashcards for those chapters as a rough
+   grouping rather than the book's own.
 
    Fields
      han   — characters
@@ -205,15 +220,15 @@ const VOCAB = [
 
   /* L1 · 他在哪儿呢 */
   { han:'吧', py:'ba', en:'(suggestion particle)', level:2, les:1, ex:'我们走吧。', exPy:'Wǒmen zǒu ba.', exEn:"Let's go." },
-  { han:'正在', py:'zhèngzài', en:'in the middle of (doing)', level:2, les:1, ex:'他正在打电话。', exPy:'Tā zhèngzài dǎ diànhuà.', exEn:"He's on the phone right now." },
-  { han:'着', py:'zhe', en:'(continuous-state particle)', level:2, les:1, ex:'门开着呢。', exPy:'Mén kāizhe ne.', exEn:'The door is open.' },
-  { han:'教室', py:'jiàoshì', en:'classroom', level:2, les:1, ex:'老师在教室里。', exPy:'Lǎoshī zài jiàoshì lǐ.', exEn:'The teacher is in the classroom.' },
-  { han:'门', py:'mén', en:'door', level:2, les:1, ex:'请关门。', exPy:'Qǐng guān mén.', exEn:'Please close the door.' },
-  { han:'旁边', py:'pángbiān', en:'beside, next to', level:2, les:1, ex:'医院在学校旁边。', exPy:'Yīyuàn zài xuéxiào pángbiān.', exEn:'The hospital is next to the school.' },
-  { han:'外', py:'wài', en:'outside', level:2, les:1, ex:'他在门外等你。', exPy:'Tā zài mén wài děng nǐ.', exEn:"He's waiting for you outside." },
-  { han:'找', py:'zhǎo', en:'to look for', level:2, les:1, ex:'我在找我的手机。', exPy:'Wǒ zài zhǎo wǒ de shǒujī.', exEn:"I'm looking for my phone." },
+  { han:'正在', py:'zhèngzài', en:'in the middle of (doing)', level:2, les:13, ex:'他正在打电话。', exPy:'Tā zhèngzài dǎ diànhuà.', exEn:"He's on the phone right now." },
+  { han:'着', py:'zhe', en:'(continuous-state particle)', level:2, les:13, ex:'门开着呢。', exPy:'Mén kāizhe ne.', exEn:'The door is open.' },
+  { han:'教室', py:'jiàoshì', en:'classroom', level:2, les:13, ex:'老师在教室里。', exPy:'Lǎoshī zài jiàoshì lǐ.', exEn:'The teacher is in the classroom.' },
+  { han:'门', py:'mén', en:'door', level:2, les:13, ex:'请关门。', exPy:'Qǐng guān mén.', exEn:'Please close the door.' },
+  { han:'旁边', py:'pángbiān', en:'beside, next to', level:2, les:3, ex:'医院在学校旁边。', exPy:'Yīyuàn zài xuéxiào pángbiān.', exEn:'The hospital is next to the school.' },
+  { han:'外', py:'wài', en:'outside', level:2, les:3, ex:'他在门外等你。', exPy:'Tā zài mén wài děng nǐ.', exEn:"He's waiting for you outside." },
+  { han:'找', py:'zhǎo', en:'to look for', level:2, les:10, ex:'我在找我的手机。', exPy:'Wǒ zài zhǎo wǒ de shǒujī.', exEn:"I'm looking for my phone." },
   { han:'问', py:'wèn', en:'to ask', level:2, les:1, ex:'我想问你一个问题。', exPy:'Wǒ xiǎng wèn nǐ yí ge wèntí.', exEn:'I want to ask you a question.' },
-  { han:'上班', py:'shàngbān', en:'to go to work', level:2, les:1, ex:'他八点上班。', exPy:'Tā bā diǎn shàngbān.', exEn:'He starts work at eight.' },
+  { han:'上班', py:'shàngbān', en:'to go to work', level:2, les:2, ex:'他八点上班。', exPy:'Tā bā diǎn shàngbān.', exEn:'He starts work at eight.' },
 
   /* L2 · 我每天六点起床 */
   { han:'每', py:'měi', en:'every, each', level:2, les:2, ex:'我每天跑步。', exPy:'Wǒ měi tiān pǎobù.', exEn:'I run every day.' },
@@ -283,9 +298,9 @@ const VOCAB = [
   { han:'羊肉', py:'yángròu', en:'mutton, lamb', level:2, les:7, ex:'我不吃羊肉。', exPy:'Wǒ bù chī yángròu.', exEn:"I don't eat lamb." },
   { han:'鱼', py:'yú', en:'fish', level:2, les:7, ex:'这个鱼很好吃。', exPy:'Zhège yú hěn hǎochī.', exEn:'This fish is delicious.' },
   { han:'西瓜', py:'xīguā', en:'watermelon', level:2, les:7, ex:'夏天我喜欢吃西瓜。', exPy:'Xiàtiān wǒ xǐhuan chī xīguā.', exEn:'I like watermelon in summer.' },
-  { han:'药', py:'yào', en:'medicine', level:2, les:7, ex:'吃药了吗？', exPy:'Chī yào le ma?', exEn:'Have you taken your medicine?' },
-  { han:'要', py:'yào', en:'to want, will', level:2, les:7, ex:'我要一杯咖啡。', exPy:'Wǒ yào yì bēi kāfēi.', exEn:"I'd like a coffee." },
-  { han:'累', py:'lèi', en:'tired', level:2, les:7, ex:'我今天很累。', exPy:'Wǒ jīntiān hěn lèi.', exEn:"I'm very tired today." },
+  { han:'药', py:'yào', en:'medicine', level:2, les:2, ex:'吃药了吗？', exPy:'Chī yào le ma?', exEn:'Have you taken your medicine?' },
+  { han:'要', py:'yào', en:'to want, will', level:2, les:1, ex:'我要一杯咖啡。', exPy:'Wǒ yào yì bēi kāfēi.', exEn:"I'd like a coffee." },
+  { han:'累', py:'lèi', en:'tired', level:2, les:2, ex:'我今天很累。', exPy:'Wǒ jīntiān hěn lèi.', exEn:"I'm very tired today." },
 
   /* L8 · 你什么时候搬家 */
   { han:'新', py:'xīn', en:'new', level:2, les:8, ex:'这是我的新房间。', exPy:'Zhè shì wǒ de xīn fángjiān.', exEn:'This is my new room.' },
@@ -294,9 +309,9 @@ const VOCAB = [
   { han:'远', py:'yuǎn', en:'far', level:2, les:8, ex:'机场离这儿很远。', exPy:'Jīchǎng lí zhèr hěn yuǎn.', exEn:'The airport is far from here.' },
   { han:'离', py:'lí', en:'away from', level:2, les:8, ex:'医院离这儿不远。', exPy:'Yīyuàn lí zhèr bù yuǎn.', exEn:"The hospital isn't far from here." },
   { han:'比', py:'bǐ', en:'than, compared with', level:2, les:8, ex:'今天比昨天热。', exPy:'Jīntiān bǐ zuótiān rè.', exEn:"It's hotter today than yesterday." },
-  { han:'贵', py:'guì', en:'expensive', level:2, les:8, ex:'这件衣服太贵了。', exPy:'Zhè jiàn yīfu tài guì le.', exEn:'This outfit is too expensive.' },
+  { han:'贵', py:'guì', en:'expensive', level:2, les:1, ex:'这件衣服太贵了。', exPy:'Zhè jiàn yīfu tài guì le.', exEn:'This outfit is too expensive.' },
   { han:'便宜', py:'piányi', en:'cheap', level:2, les:8, ex:'这个手机很便宜。', exPy:'Zhège shǒujī hěn piányi.', exEn:'This phone is cheap.' },
-  { han:'最', py:'zuì', en:'most', level:2, les:8, ex:'这是最好的。', exPy:'Zhè shì zuì hǎo de.', exEn:'This is the best one.' },
+  { han:'最', py:'zuì', en:'most', level:2, les:1, ex:'这是最好的。', exPy:'Zhè shì zuì hǎo de.', exEn:'This is the best one.' },
   { han:'非常', py:'fēicháng', en:'extremely', level:2, les:8, ex:'今天非常冷。', exPy:'Jīntiān fēicháng lěng.', exEn:"It's extremely cold today." },
 
   /* L9 · 我是在网上买的 */
@@ -312,10 +327,10 @@ const VOCAB = [
   { han:'错', py:'cuò', en:'wrong, mistake', level:2, les:9, ex:'我写错了。', exPy:'Wǒ xiěcuò le.', exEn:'I wrote it wrong.' },
 
   /* L10 · 我头疼 */
-  { han:'生病', py:'shēngbìng', en:'to fall ill', level:2, les:10, ex:'小王今天生病了。', exPy:'Xiǎo Wáng jīntiān shēngbìng le.', exEn:'Xiao Wang is ill today.' },
-  { han:'身体', py:'shēntǐ', en:'body, health', level:2, les:10, ex:'他身体很好。', exPy:'Tā shēntǐ hěn hǎo.', exEn:"He's in good health." },
+  { han:'生病', py:'shēngbìng', en:'to fall ill', level:2, les:2, ex:'小王今天生病了。', exPy:'Xiǎo Wáng jīntiān shēngbìng le.', exEn:'Xiao Wang is ill today.' },
+  { han:'身体', py:'shēntǐ', en:'body, health', level:2, les:2, ex:'他身体很好。', exPy:'Tā shēntǐ hěn hǎo.', exEn:"He's in good health." },
   { han:'眼睛', py:'yǎnjing', en:'eye', level:2, les:10, ex:'她的眼睛很大。', exPy:'Tā de yǎnjing hěn dà.', exEn:'She has big eyes.' },
-  { han:'觉得', py:'juéde', en:'to feel, to think', level:2, les:10, ex:'我觉得这个很好。', exPy:'Wǒ juéde zhège hěn hǎo.', exEn:'I think this one is good.' },
+  { han:'觉得', py:'juéde', en:'to feel, to think', level:2, les:1, ex:'我觉得这个很好。', exPy:'Wǒ juéde zhège hěn hǎo.', exEn:'I think this one is good.' },
   { han:'希望', py:'xīwàng', en:'to hope', level:2, les:10, ex:'我希望明天不下雨。', exPy:'Wǒ xīwàng míngtiān bú xiàyǔ.', exEn:'I hope it does not rain tomorrow.' },
   { han:'可能', py:'kěnéng', en:'maybe, possible', level:2, les:10, ex:'他可能不来了。', exPy:'Tā kěnéng bù lái le.', exEn:'He might not come.' },
   { han:'懂', py:'dǒng', en:'to understand', level:2, les:10, ex:'我不懂这个字。', exPy:'Wǒ bù dǒng zhège zì.', exEn:"I don't understand this character." },
@@ -372,15 +387,15 @@ const VOCAB = [
   { han:'笑', py:'xiào', en:'to laugh, to smile', level:2, les:14, ex:'大家都笑了。', exPy:'Dàjiā dōu xiào le.', exEn:'Everyone laughed.' },
 
   /* L15 · 我要去旅游了 */
-  { han:'旅游', py:'lǚyóu', en:'to travel', level:2, les:15, ex:'我要去旅游了。', exPy:'Wǒ yào qù lǚyóu le.', exEn:"I'm off travelling." },
+  { han:'旅游', py:'lǚyóu', en:'to travel', level:2, les:1, ex:'我要去旅游了。', exPy:'Wǒ yào qù lǚyóu le.', exEn:"I'm off travelling." },
   { han:'船', py:'chuán', en:'boat, ship', level:2, les:15, ex:'我们坐船去。', exPy:'Wǒmen zuò chuán qù.', exEn:"We'll go by boat." },
   { han:'机场', py:'jīchǎng', en:'airport', level:2, les:15, ex:'我去机场接他。', exPy:'Wǒ qù jīchǎng jiē tā.', exEn:"I'm meeting him at the airport." },
   { han:'报纸', py:'bàozhǐ', en:'newspaper', level:2, les:15, ex:'爸爸在看报纸。', exPy:'Bàba zài kàn bàozhǐ.', exEn:'Dad is reading the newspaper.' },
   { han:'一起', py:'yìqǐ', en:'together', level:2, les:15, ex:'我们一起去吧。', exPy:'Wǒmen yìqǐ qù ba.', exEn:"Let's go together." },
-  { han:'忙', py:'máng', en:'busy', level:2, les:15, ex:'他工作很忙。', exPy:'Tā gōngzuò hěn máng.', exEn:"He's very busy with work." },
-  { han:'也', py:'yě', en:'also, too', level:2, les:15, ex:'我也想去。', exPy:'Wǒ yě xiǎng qù.', exEn:'I want to go too.' },
-  { han:'说', py:'shuō', en:'to say, to speak', level:2, les:15, ex:'他说他很忙。', exPy:'Tā shuō tā hěn máng.', exEn:'He says he is very busy.' },
-  { han:'为什么', py:'wèi shénme', en:'why', level:2, les:15, ex:'你为什么不去？', exPy:'Nǐ wèi shénme bú qù?', exEn:"Why aren't you going?" },
+  { han:'忙', py:'máng', en:'busy', level:2, les:2, ex:'他工作很忙。', exPy:'Tā gōngzuò hěn máng.', exEn:"He's very busy with work." },
+  { han:'也', py:'yě', en:'also, too', level:2, les:1, ex:'我也想去。', exPy:'Wǒ yě xiǎng qù.', exEn:'I want to go too.' },
+  { han:'说', py:'shuō', en:'to say, to speak', level:2, les:1, ex:'他说他很忙。', exPy:'Tā shuō tā hěn máng.', exEn:'He says he is very busy.' },
+  { han:'为什么', py:'wèi shénme', en:'why', level:2, les:1, ex:'你为什么不去？', exPy:'Nǐ wèi shénme bú qù?', exEn:"Why aren't you going?" },
 ];
 
 /* Stable id per word — used as the localStorage key for its schedule. */
